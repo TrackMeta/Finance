@@ -330,7 +330,6 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
   <div id="s-neg"></div>
   <div class="card-f"><button class="btn sm" id="s-addneg">+ Agregar negocio</button></div>
   <h2 class="sec">Datos</h2>
-  <button class="btn wide" id="s-seed" style="margin-bottom:9px">Cargar mis cuentas iniciales</button>
   <button class="btn wide" id="s-export" style="margin-bottom:9px">Descargar copia (JSON)</button>
   <button class="btn wide dan" id="s-wipe">Borrar todo</button>
   <div class="info" style="margin-top:22px">
@@ -1246,17 +1245,6 @@ $("#s-wipe").onclick=async()=>{
     for(const f of (t==="config"?[S.config]:S[t])){ try{ if(f&&f.id) await api(t,"DELETE",null,f.id); }catch(e){ console.warn(t,e.message); } } }
   localStorage.removeItem(LS); S={config:{id:uid(),saldo_inicial:0,fecha_inicio:hoyISO()},negocios:[],movimientos:[],prestamos:[],cuotas:[],juntas:[],aportes:[],tarjetas:[],pagos_fijos:[]};
   await normaliza(); render(); ver("hoy"); toast("Todo borrado"); };
-$("#s-seed").onclick=async()=>{
-  if(S.prestamos.some(p=>p.persona==="Juan")||S.juntas.some(j=>j.nombre==="Junta semanal")){ alert("Estas cuentas ya están cargadas. Usa \"Borrar todo\" primero si quieres empezar de cero."); return; }
-  await guardaConfig({saldo_inicial:4181.14,fecha_inicio:"2026-09-06"});
-  const P=async(persona,capital,tasa,meses,modo,inicio,fin)=>{ const pid=uid(); await ins("prestamos",{id:pid,persona,capital,tasa,meses,modo,inicio,fin:fin||null});
-    for(const c of generaCuotas({capital,tasa,meses,modo,inicio,fin})) await ins("cuotas",{prestamo_id:pid,n:c.n,fecha:c.fecha,capital:n2(c.capital),interes:n2(c.interes),etiqueta:c.etiqueta,estado:"pendiente",fecha_cobro:null}); };
-  await P("Juan",5000,3,6,"interes","2026-08-13"); await P("Lesslie",500,10,1,"unico","2026-08-17","2026-09-17");
-  await P("Nando Luz",139.70,0,1,"unico","2026-08-04","2026-09-04"); await P("Nella",1423,0,1,"libre","2026-07-25");
-  const jid=uid(); await ins("juntas",{id:jid,nombre:"Junta semanal",aporte:200,num:14,frecuencia:7,inicio:"2026-06-23",fecha_cobro:"2026-09-26",monto_cobro:2800,afecta_caja:true,cobrado:false});
-  const fechas=["2026-06-23","2026-06-27","2026-07-04","2026-07-11","2026-07-18","2026-07-26","2026-08-01","2026-08-08","2026-08-15","2026-08-22","2026-08-29","2026-09-05","2026-09-12","2026-09-19"];
-  for(let i=0;i<fechas.length;i++) await ins("aportes",{junta_id:jid,n:i+1,fecha:fechas[i],monto:200,estado:i<12?"pagado":"pendiente"});
-  render(); ver("hoy"); toast("Cuentas cargadas"); };
 
 /* ============================== ACCESO ============================== */
 let MODO_REG=false;
