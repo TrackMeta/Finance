@@ -226,6 +226,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast{transition:opacity .18s,transform .22s cubic-bezier(.2,.9,.3,1.3)}
 .toast.in{background:var(--in);color:#07261B} .toast.out{background:var(--out);color:#fff} .toast.card{background:var(--blue);color:#fff}
+.toast.tap{pointer-events:auto;cursor:pointer}
 .list-plain{margin:0;padding:0;list-style:none}
 .tiny{font-size:11.5px;color:var(--faint)}
 .nowrap{white-space:nowrap}
@@ -523,7 +524,7 @@ const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 const negColor = nombre => (S.negocios.find(n=>n.nombre===nombre)||{}).color || "var(--faint)";
 const negOrden = () => [...S.negocios].sort((a,b)=>(a.orden||0)-(b.orden||0));
 
-function toast(t,tipo){ const e=document.getElementById("toast"); e.textContent=t; e.className="toast on"+(tipo?" "+tipo:"");
+function toast(t,tipo){ const e=document.getElementById("toast"); e.textContent=t; e.className="toast on"+(tipo?" "+tipo:""); e.onclick=null;
   clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove("on"),2200); }
 
 /* ---------- persistencia ---------- */
@@ -1370,6 +1371,14 @@ $("#lg-go").onclick=async()=>{ const mail=$("#lg-mail").value.trim(), pass=$("#l
 
 /* ============================== ARRANQUE ============================== */
 (async()=>{ await cargar(); render(); pintaEstado(); if(REMOTO&&!logueado()){ pintaLogin(); abre("sh-login"); } })();
+
+/* ---------- abrir sin internet ---------- */
+if("serviceWorker" in navigator && /^https?:/.test(location.protocol)){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  navigator.serviceWorker.addEventListener("message",e=>{ if(e.data&&e.data.tipo==="nueva-version") avisaVersion(); });
+}
+function avisaVersion(){ const e=$("#toast"); e.textContent="Hay una versión nueva. Toca aquí para actualizar."; e.className="toast on tap card";
+  clearTimeout(e._t); e.onclick=()=>location.reload(); e._t=setTimeout(()=>{ e.classList.remove("on"); e.onclick=null; },12000); }
 </script>
 </body>
 </html>
