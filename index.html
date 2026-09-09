@@ -333,6 +333,8 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
   <div class="card-f"><button class="btn sm" id="s-addneg">+ Agregar negocio</button></div>
   <h2 class="sec">Datos</h2>
   <button class="btn wide" id="s-export" style="margin-bottom:9px">Descargar copia (JSON)</button>
+  <button class="btn wide" id="s-import" style="margin-bottom:9px">Restaurar desde una copia</button>
+  <input type="file" id="s-import-file" accept="application/json,.json" hidden>
   <button class="btn wide dan" id="s-wipe">Borrar todo</button>
   <div class="info" style="margin-top:22px">
     <b style="color:var(--ink)">Cómo cuenta la app</b><br>
@@ -371,7 +373,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 
 <!-- ===== PRÉSTAMO ===== -->
 <div class="sheet" id="sh-prestamo"><div class="sheet-in">
-  <div class="sheet-h"><h3>Nuevo préstamo</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-h"><h3 id="p-tit">Nuevo préstamo</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <label class="f"><span>¿A quién le prestas?</span><input class="inp" id="p-persona" placeholder="Nombre"></label>
   <div class="two">
     <label class="f"><span>Capital (S/)</span><input class="inp" id="p-capital" type="number" step="0.01" inputmode="decimal"></label>
@@ -396,7 +398,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 
 <!-- ===== JUNTA ===== -->
 <div class="sheet" id="sh-junta"><div class="sheet-in">
-  <div class="sheet-h"><h3>Nueva junta</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-h"><h3 id="j-tit">Nueva junta</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <label class="f"><span>Nombre</span><input class="inp" id="j-nombre" placeholder="Junta del barrio"></label>
   <div class="two">
     <label class="f"><span>Aporte (S/)</span><input class="inp" id="j-aporte" type="number" step="0.01" inputmode="decimal"></label>
@@ -416,7 +418,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 
 <!-- ===== TARJETA ===== -->
 <div class="sheet" id="sh-tarjeta"><div class="sheet-in">
-  <div class="sheet-h"><h3>Nueva tarjeta</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-h"><h3 id="t-tit">Nueva tarjeta</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <label class="f"><span>Nombre</span><input class="inp" id="t-nombre" placeholder="BCP Visa, Interbank…"></label>
   <div class="two">
     <label class="f"><span>Deuda actual (S/)</span><input class="inp" id="t-deuda" type="number" step="0.01" inputmode="decimal" value="0"></label>
@@ -428,7 +430,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 
 <!-- ===== PAGO FIJO ===== -->
 <div class="sheet" id="sh-fijo"><div class="sheet-in">
-  <div class="sheet-h"><h3>Nuevo pago fijo</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="sheet-h"><h3 id="pf-tit">Nuevo pago fijo</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <label class="f"><span>Qué pagas</span><input class="inp" id="pf-nombre" placeholder="Internet, ChatGPT, alquiler…"></label>
   <div class="two">
     <label class="f"><span>Monto (S/)</span><input class="inp" id="pf-monto" type="number" step="0.01" inputmode="decimal"></label>
@@ -445,6 +447,15 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 <div class="sheet" id="sh-det"><div class="sheet-in">
   <div class="sheet-h"><h3 id="d-tit">Detalle</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div id="d-body"></div>
+</div></div>
+
+<!-- ===== ABONO A CUOTA ===== -->
+<div class="sheet" id="sh-abono"><div class="sheet-in">
+  <div class="sheet-h"><h3>Registrar abono</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="ab-info" class="prev" style="margin-top:14px"></div>
+  <label class="f"><span>¿Cuánto te pagó?</span><input class="inp" id="ab-monto" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+  <div class="hint">Se cobra primero el interés; lo que sobra baja el capital.</div>
+  <button class="btn pri wide" style="margin-top:16px" id="ab-save">Registrar abono</button>
 </div></div>
 
 <!-- ===== LOGIN ===== -->
@@ -741,11 +752,20 @@ function deudaEn(d,tid){
     else if(m.tipo==="pago_tarjeta") s-=+m.monto; }
   return n2(s);
 }
+/* cuánto se ha cobrado de una cuota, leído de sus movimientos (fuente de la verdad, permite abonos parciales) */
+function cobradoCuota(id,hasta){
+  let cap=0,inte=0;
+  for(const m of S.movimientos){ if(m.ref!==id) continue; if(hasta&&m.fecha>hasta) continue;
+    if(m.categoria==="Interés") inte+=+m.monto||0; else cap+=+m.monto||0; }
+  return {cap:n2(cap),inte:n2(inte)};
+}
+function saldoCuota(c){ const y=cobradoCuota(c.id); return { cap:Math.max(0,n2((+c.capital||0)-y.cap)), inte:Math.max(0,n2((+c.interes||0)-y.inte)) }; }
+const totalSaldoCuota = c => { const s=saldoCuota(c); return n2(s.cap+s.inte); };
 function colocadoEn(d){
   let cap=0,inte=0; const pm=Object.fromEntries(S.prestamos.map(p=>[p.id,p]));
   for(const c of S.cuotas){ const p=pm[c.prestamo_id]; if(!p||p.inicio>d) continue;
-    if(c.estado==="cobrado"&&c.fecha_cobro&&c.fecha_cobro<=d) continue;
-    cap+=+c.capital||0; if(c.fecha&&c.fecha<=d) inte+=+c.interes||0; }
+    const y=cobradoCuota(c.id,d);
+    cap+=Math.max(0,(+c.capital||0)-y.cap); if(c.fecha&&c.fecha<=d) inte+=Math.max(0,(+c.interes||0)-y.inte); }
   return n2(cap+inte);
 }
 function juntaEn(d){
@@ -774,8 +794,8 @@ function serie(){
 /* ---------- pendientes ---------- */
 function pendientes(){
   const hoy=hoyISO(), out=[]; const pm=Object.fromEntries(S.prestamos.map(p=>[p.id,p]));
-  for(const c of S.cuotas){ if(c.estado==="cobrado") continue; const p=pm[c.prestamo_id]; if(!p) continue;
-    out.push({tipo:"cuota",id:c.id,fecha:c.fecha,monto:n2((+c.capital||0)+(+c.interes||0)),titulo:p.persona,sub:c.etiqueta,dir:"in",neg:NEG_PREST}); }
+  for(const c of S.cuotas){ if(c.estado==="cobrado") continue; const p=pm[c.prestamo_id]; if(!p) continue; const falta=totalSaldoCuota(c); if(falta<=0) continue;
+    out.push({tipo:"cuota",id:c.id,fecha:c.fecha,monto:falta,titulo:p.persona,sub:c.etiqueta,dir:"in",neg:NEG_PREST}); }
   for(const a of S.aportes){ if(a.estado==="pagado") continue; const j=S.juntas.find(x=>x.id===a.junta_id); if(!j) continue;
     out.push({tipo:"aporte",id:a.id,fecha:a.fecha,monto:+a.monto,titulo:j.nombre,sub:"Aporte "+a.n,dir:"out",neg:NEG_PERS}); }
   for(const j of S.juntas){ if(j.cobrado||!j.fecha_cobro) continue;
@@ -1024,7 +1044,7 @@ function rCuentas(){
     const mes=S.movimientos.filter(m=>m.tarjeta_id===t.id&&m.tipo==="gasto"&&mesDe(m.fecha)===ym).reduce((a,m)=>a+ +m.monto,0);
     return `<div class="card"><div class="card-h"><div class="card-t">${esc(t.nombre)}</div><div class="card-n ${d>0?"out":"in"}">${d>0?"debes "+S_(d):"al día"}</div></div>
       <div class="card-s">Consumido este mes: ${S_(mes)}${t.dia_pago?" · pagas el "+t.dia_pago+" de cada mes":""}</div>
-      <div class="card-f"><button class="btn sm pri" data-pagotar="${t.id}">Pagué la tarjeta</button><button class="btn sm" data-vertar="${t.id}">Movimientos</button><button class="btn sm dan" data-deltar="${t.id}">Eliminar</button></div></div>`; }).join("")
+      <div class="card-f"><button class="btn sm pri" data-pagotar="${t.id}">Pagué la tarjeta</button><button class="btn sm" data-vertar="${t.id}">Movimientos</button><button class="btn sm" data-edittar="${t.id}">Editar</button><button class="btn sm dan" data-deltar="${t.id}">Eliminar</button></div></div>`; }).join("")
     : `<div class="empty"><b>Sin tarjetas</b>Agrega una y podrás marcar compras "con tarjeta": cuentan como gasto hoy, pero la caja baja recién cuando pagas.</div>`;
 
   const fij=S.pagos_fijos.filter(p=>p.activo!==false);
@@ -1037,11 +1057,11 @@ function rCuentas(){
     : `<div class="empty"><b>Sin pagos fijos</b>Internet, suscripciones, alquiler. Los anotas una vez y cada mes te aparecen en Pendientes.</div>`;
 
   $("#k-prest").innerHTML = S.prestamos.length ? S.prestamos.map(p=>{
-    const cs=S.cuotas.filter(x=>x.prestamo_id===p.id), tot=cs.reduce((a,b)=>a+ +b.capital+ +b.interes,0), cob=cs.filter(x=>x.estado==="cobrado").reduce((a,b)=>a+ +b.capital+ +b.interes,0);
-    const prox=cs.filter(x=>x.estado!=="cobrado").sort((a,b)=>(a.fecha||"9")<(b.fecha||"9")?-1:1)[0], venc=prox&&prox.fecha&&prox.fecha<hoy;
-    return `<div class="card"><div class="card-h"><div class="card-t">${esc(p.persona)}</div><div class="card-n gold">${S_(tot-cob)}</div></div>
+    const cs=S.cuotas.filter(x=>x.prestamo_id===p.id), tot=cs.reduce((a,b)=>a+ +b.capital+ +b.interes,0), pend=cs.reduce((a,c)=>a+totalSaldoCuota(c),0), cob=n2(tot-pend);
+    const prox=cs.filter(x=>totalSaldoCuota(x)>0).sort((a,b)=>(a.fecha||"9")<(b.fecha||"9")?-1:1)[0], venc=prox&&prox.fecha&&prox.fecha<hoy;
+    return `<div class="card"><div class="card-h"><div class="card-t">${esc(p.persona)}</div><div class="card-n gold">${S_(pend)}</div></div>
       <div class="card-s">${S_(p.capital)}${+p.tasa?" al "+(+p.tasa)+"% mensual":" sin interés"} · ${cs.filter(x=>x.estado==="cobrado").length}/${cs.length} cobradas<br>
-      ${prox?(venc?`<span style="color:var(--out)">Atrasado: ${fLarga(prox.fecha)}</span>`:`Próximo: ${fLarga(prox.fecha)} · ${S_((+prox.capital)+(+prox.interes))}`):"Todo cobrado"}</div>
+      ${prox?(venc?`<span style="color:var(--out)">Atrasado: ${fLarga(prox.fecha)}</span>`:`Próximo: ${fLarga(prox.fecha)} · ${S_(totalSaldoCuota(prox))}`):"Todo cobrado"}</div>
       <div class="bar"><i style="width:${tot?(cob/tot*100).toFixed(1):0}%;background:var(--in)"></i></div>
       <div class="card-f"><button class="btn sm" data-verp="${p.id}">Ver cuotas</button><button class="btn sm dan" data-delp="${p.id}">Eliminar</button></div></div>`; }).join("")
     : `<div class="empty"><b>Sin préstamos</b>Crea uno y la app arma sola el calendario de cuotas con sus intereses.</div>`;
@@ -1204,10 +1224,34 @@ function pPrev(){ const p=pDatos(); $("#p-wrap-fin").style.display=p.modo==="uni
   const cs=generaCuotas(p), tot=cs.reduce((a,b)=>a+b.capital+b.interes,0), int=cs.reduce((a,b)=>a+b.interes,0);
   $("#p-prev").innerHTML=`<b>${cs.length} ${cs.length===1?"pago":"pagos"}</b> · te devuelven <b>${S_(tot)}</b>${int>0?`, de los cuales <b>${S_(int)}</b> son ganancia`:""}<br>${cs.slice(0,3).map(c=>`${fCorta(c.fecha)} · ${S_(c.capital+c.interes)}`).join("<br>")}${cs.length>3?"<br>…":""}`; }
 ["p-persona","p-capital","p-inicio","p-modo","p-tasa","p-meses","p-fin"].forEach(id=>{ $("#"+id).addEventListener("input",pPrev); $("#"+id).addEventListener("change",pPrev); });
-$("#new-prestamo").onclick=()=>{ ["p-persona","p-capital","p-fin"].forEach(i=>$("#"+i).value=""); $("#p-inicio").value=hoyISO(); $("#p-tasa").value="0"; $("#p-meses").value="6"; $("#p-caja").checked=true; pPrev(); abre("sh-prestamo"); };
-$("#p-save").onclick=async()=>{ const p=pDatos(); if(!p.persona) return toast("Ponle un nombre al deudor"); if(!(p.capital>0)) return toast("El capital debe ser mayor que cero");
+let PREST_ED=null;
+/* un préstamo está "tocado" si ya cobraste o abonaste alguna de sus cuotas: entonces solo se puede renombrar */
+function prestTocado(pid){ return S.cuotas.filter(c=>c.prestamo_id===pid).some(c=>c.estado==="cobrado"||S.movimientos.some(m=>m.ref===c.id)); }
+function prestCampos(hab){ ["p-capital","p-inicio","p-modo","p-tasa","p-meses","p-fin","p-caja"].forEach(i=>$("#"+i).disabled=!hab); }
+async function guardaCuotas(pid,p){ for(const c of S.cuotas.filter(c=>c.prestamo_id===pid)) await del("cuotas",c.id);
+  for(const c of generaCuotas(p)) await ins("cuotas",{prestamo_id:pid,n:c.n,fecha:c.fecha,capital:n2(c.capital),interes:n2(c.interes),etiqueta:c.etiqueta,estado:"pendiente",fecha_cobro:null}); }
+$("#new-prestamo").onclick=()=>{ PREST_ED=null; $("#p-tit").textContent="Nuevo préstamo"; $("#p-save").textContent="Crear préstamo"; prestCampos(true);
+  ["p-persona","p-capital","p-fin"].forEach(i=>$("#"+i).value=""); $("#p-inicio").value=hoyISO(); $("#p-modo").value="interes"; $("#p-tasa").value="0"; $("#p-meses").value="6"; $("#p-caja").checked=true; pPrev(); abre("sh-prestamo"); };
+function editaPrestamo(pid){ const p=S.prestamos.find(x=>x.id===pid); if(!p) return; PREST_ED=pid; const tocado=prestTocado(pid);
+  $("#p-tit").textContent="Editar préstamo"; $("#p-save").textContent="Guardar cambios";
+  $("#p-persona").value=p.persona||""; $("#p-capital").value=p.capital??""; $("#p-inicio").value=p.inicio||hoyISO(); $("#p-modo").value=p.modo||"interes"; $("#p-tasa").value=p.tasa??0; $("#p-meses").value=p.meses??1; $("#p-fin").value=p.fin||"";
+  $("#p-caja").checked=S.movimientos.some(m=>m.ref===pid&&m.categoria==="Préstamo otorgado");
+  prestCampos(!tocado); cierra(); abre("sh-prestamo");
+  if(tocado){ $("#p-wrap-fin").style.display="none"; $("#p-prev").innerHTML=`<span style="color:var(--gold)">Ya cobraste o abonaste cuotas de este préstamo. Solo puedes cambiar el nombre. Para cambiar montos, elimínalo y créalo de nuevo.</span>`; }
+  else pPrev(); }
+$("#p-save").onclick=async()=>{ const p=pDatos(); if(!p.persona) return toast("Ponle un nombre al deudor");
+  if(PREST_ED){ const pid=PREST_ED;
+    if(prestTocado(pid)){ await upd("prestamos",pid,{persona:p.persona}); cierra(); render(); toast("Guardado"); PREST_ED=null; return; }
+    if(!(p.capital>0)) return toast("El capital debe ser mayor que cero");
+    await upd("prestamos",pid,{persona:p.persona,capital:n2(p.capital),tasa:p.tasa,meses:p.meses,modo:p.modo,inicio:p.inicio,fin:p.fin||null});
+    await guardaCuotas(pid,p);
+    const mov=S.movimientos.find(m=>m.ref===pid&&m.categoria==="Préstamo otorgado");
+    if($("#p-caja").checked){ if(mov) await upd("movimientos",mov.id,{fecha:p.inicio,monto:n2(p.capital),descripcion:"Préstamo a "+p.persona}); else await ins("movimientos",{fecha:p.inicio,tipo:"gasto",negocio:NEG_PREST,categoria:"Préstamo otorgado",descripcion:"Préstamo a "+p.persona,monto:n2(p.capital),metodo:"caja",pl:false,creado:new Date().toISOString(),ref:pid}); }
+    else if(mov) await del("movimientos",mov.id);
+    cierra(); render(); toast("Préstamo actualizado"); PREST_ED=null; return; }
+  if(!(p.capital>0)) return toast("El capital debe ser mayor que cero");
   const pid=uid(); await ins("prestamos",{id:pid,persona:p.persona,capital:n2(p.capital),tasa:p.tasa,meses:p.meses,modo:p.modo,inicio:p.inicio,fin:p.fin||null});
-  for(const c of generaCuotas(p)) await ins("cuotas",{prestamo_id:pid,n:c.n,fecha:c.fecha,capital:n2(c.capital),interes:n2(c.interes),etiqueta:c.etiqueta,estado:"pendiente",fecha_cobro:null});
+  await guardaCuotas(pid,p);
   if($("#p-caja").checked) await ins("movimientos",{fecha:p.inicio,tipo:"gasto",negocio:NEG_PREST,categoria:"Préstamo otorgado",descripcion:"Préstamo a "+p.persona,monto:n2(p.capital),metodo:"caja",pl:false,creado:new Date().toISOString(),ref:pid});
   cierra(); render(); toast("Préstamo creado con su calendario"); };
 
@@ -1218,17 +1262,40 @@ function jPrev(){ const j=jDatos(); if(!(j.aporte>0&&j.num>0)){ $("#j-prev").inn
   const as=generaAportes(j), tot=as.reduce((a,b)=>a+b.monto,0), res=n2(j.monto_cobro-tot);
   $("#j-prev").innerHTML=`<b>${as.length} aportes</b> de ${S_(j.aporte)} · pones en total <b>${S_(tot)}</b><br>Del ${fCorta(as[0].fecha)} al ${fCorta(as[as.length-1].fecha)}${j.monto_cobro>0?`<br>Resultado: <b style="color:${colorDe(res)}">${SF(res)}</b>${res===0?" — solo te obliga a ahorrar":res<0?" — estás pagando por ahorrar":""}`:""}`; }
 ["j-nombre","j-aporte","j-num","j-frec","j-inicio","j-fcobro","j-mcobro"].forEach(id=>{ $("#"+id).addEventListener("input",jPrev); $("#"+id).addEventListener("change",jPrev); });
-$("#new-junta").onclick=()=>{ $("#j-nombre").value=""; $("#j-aporte").value=""; $("#j-num").value="12"; $("#j-inicio").value=hoyISO(); $("#j-fcobro").value=""; $("#j-mcobro").value=""; jPrev(); abre("sh-junta"); };
-$("#j-save").onclick=async()=>{ const j=jDatos(); if(!(j.aporte>0)) return toast("Indica el aporte"); if(!(j.num>0)) return toast("Indica cuántos aportes son");
+let JUNTA_ED=null;
+function juntaCampos(estructura,cobro){ ["j-aporte","j-num","j-frec","j-inicio"].forEach(i=>$("#"+i).disabled=!estructura); ["j-fcobro","j-mcobro"].forEach(i=>$("#"+i).disabled=!cobro); }
+$("#new-junta").onclick=()=>{ JUNTA_ED=null; $("#j-tit").textContent="Nueva junta"; $("#j-save").textContent="Crear junta"; juntaCampos(true,true);
+  $("#j-nombre").value=""; $("#j-aporte").value=""; $("#j-num").value="12"; $("#j-frec").value="7"; $("#j-inicio").value=hoyISO(); $("#j-fcobro").value=""; $("#j-mcobro").value=""; jPrev(); abre("sh-junta"); };
+function editaJunta(jid){ const j=S.juntas.find(x=>x.id===jid); if(!j) return; JUNTA_ED=jid;
+  const algunPago=S.aportes.filter(a=>a.junta_id===jid).some(a=>a.estado==="pagado"), cobrada=!!j.cobrado;
+  $("#j-tit").textContent="Editar junta"; $("#j-save").textContent="Guardar cambios";
+  $("#j-nombre").value=j.nombre||""; $("#j-aporte").value=j.aporte??""; $("#j-num").value=j.num??1; $("#j-frec").value=String(j.frecuencia||7); $("#j-inicio").value=j.inicio||hoyISO(); $("#j-fcobro").value=j.fecha_cobro||""; $("#j-mcobro").value=j.monto_cobro??"";
+  juntaCampos(!algunPago&&!cobrada,!cobrada); cierra(); abre("sh-junta"); jPrev();
+  if(cobrada) $("#j-prev").innerHTML=`<span style="color:var(--gold)">Junta ya cobrada. Solo puedes cambiar el nombre.</span>`;
+  else if(algunPago) $("#j-prev").innerHTML=`<span style="color:var(--gold)">Ya pagaste aportes. Puedes cambiar el nombre, la fecha y el monto de cobro; no el plan de aportes.</span>`; }
+$("#j-save").onclick=async()=>{ const j=jDatos();
+  if(JUNTA_ED){ const jid=JUNTA_ED, viejo=S.juntas.find(x=>x.id===jid), algunPago=S.aportes.filter(a=>a.junta_id===jid).some(a=>a.estado==="pagado"), cobrada=!!(viejo&&viejo.cobrado);
+    const patch={nombre:j.nombre}; if(!cobrada){ patch.fecha_cobro=j.fecha_cobro||null; patch.monto_cobro=n2(j.monto_cobro); }
+    await upd("juntas",jid,patch);
+    if(!algunPago&&!cobrada){ if(!(j.aporte>0)) return toast("Indica el aporte"); if(!(j.num>0)) return toast("Indica cuántos aportes son");
+      await upd("juntas",jid,{aporte:n2(j.aporte),num:j.num,frecuencia:j.frecuencia,inicio:j.inicio});
+      for(const a of S.aportes.filter(a=>a.junta_id===jid)) await del("aportes",a.id);
+      for(const a of generaAportes(j)) await ins("aportes",{junta_id:jid,n:a.n,fecha:a.fecha,monto:n2(a.monto),estado:"pendiente"}); }
+    cierra(); render(); toast("Junta actualizada"); JUNTA_ED=null; return; }
+  if(!(j.aporte>0)) return toast("Indica el aporte"); if(!(j.num>0)) return toast("Indica cuántos aportes son");
   const jid=uid(); await ins("juntas",{id:jid,nombre:j.nombre,aporte:n2(j.aporte),num:j.num,frecuencia:j.frecuencia,inicio:j.inicio,fecha_cobro:j.fecha_cobro||null,monto_cobro:n2(j.monto_cobro),afecta_caja:true,cobrado:false});
   for(const a of generaAportes(j)) await ins("aportes",{junta_id:jid,n:a.n,fecha:a.fecha,monto:n2(a.monto),estado:"pendiente"});
-  cierra(); render(); toast("Junta creada"); };
+  cierra(); render(); toast("Junta creada"); JUNTA_ED=null; };
 
 /* ============================== TARJETA ============================== */
-$("#new-tarjeta").onclick=()=>{ $("#t-nombre").value=""; $("#t-deuda").value="0"; $("#t-dia").value=""; abre("sh-tarjeta"); };
+let TAR_ED=null;
+$("#new-tarjeta").onclick=()=>{ TAR_ED=null; $("#t-tit").textContent="Nueva tarjeta"; $("#t-save").textContent="Crear tarjeta"; $("#t-nombre").value=""; $("#t-deuda").value="0"; $("#t-dia").value=""; abre("sh-tarjeta"); };
+function editaTarjeta(tid){ const t=S.tarjetas.find(x=>x.id===tid); if(!t) return; TAR_ED=tid; $("#t-tit").textContent="Editar tarjeta"; $("#t-save").textContent="Guardar cambios";
+  $("#t-nombre").value=t.nombre||""; $("#t-deuda").value=t.deuda_inicial??0; $("#t-dia").value=t.dia_pago||""; cierra(); abre("sh-tarjeta"); }
 $("#t-save").onclick=async()=>{ const n=$("#t-nombre").value.trim(); if(!n) return toast("Ponle nombre a la tarjeta");
-  await ins("tarjetas",{nombre:n,deuda_inicial:n2(parseFloat($("#t-deuda").value||0)),dia_pago:parseInt($("#t-dia").value)||null});
-  cierra(); render(); toast("Tarjeta creada"); };
+  const datos={nombre:n,deuda_inicial:n2(parseFloat($("#t-deuda").value||0)),dia_pago:parseInt($("#t-dia").value)||null};
+  if(TAR_ED){ await upd("tarjetas",TAR_ED,datos); TAR_ED=null; cierra(); render(); toast("Tarjeta actualizada"); }
+  else { await ins("tarjetas",datos); cierra(); render(); toast("Tarjeta creada"); } };
 
 /* ============================== PAGO FIJO ============================== */
 let PF={};
@@ -1239,19 +1306,42 @@ function pintaFijo(){
   $("#pf-wrap-tar").style.display=PF.metodo==="tarjeta"&&S.tarjetas.length?"":"none";
   if(S.tarjetas.length){ if(!PF.tarjeta_id) PF.tarjeta_id=S.tarjetas[0].id; chips("#pf-tar", S.tarjetas.map(t=>t.nombre), (S.tarjetas.find(t=>t.id===PF.tarjeta_id)||{}).nombre, v=>{ PF.tarjeta_id=(S.tarjetas.find(t=>t.nombre===v)||{}).id; pintaFijo(); }); }
 }
-$("#new-fijo").onclick=()=>{ PF={negocio:NEG_PERS,categoria:"Servicios",metodo:"caja",tarjeta_id:null}; $("#pf-nombre").value=""; $("#pf-monto").value=""; $("#pf-dia").value="1"; pintaFijo(); abre("sh-fijo"); };
+$("#new-fijo").onclick=()=>{ PF={editando:null,negocio:NEG_PERS,categoria:"Servicios",metodo:"caja",tarjeta_id:null}; $("#pf-tit").textContent="Nuevo pago fijo"; $("#pf-save").textContent="Crear pago fijo"; $("#pf-nombre").value=""; $("#pf-monto").value=""; $("#pf-dia").value="1"; pintaFijo(); abre("sh-fijo"); };
+function editaFijo(id){ const pf=S.pagos_fijos.find(x=>x.id===id); if(!pf) return; PF={editando:id,negocio:pf.negocio||NEG_PERS,categoria:pf.categoria||"Servicios",metodo:pf.metodo||"caja",tarjeta_id:pf.tarjeta_id||null};
+  $("#pf-tit").textContent="Editar pago fijo"; $("#pf-save").textContent="Guardar cambios"; $("#pf-nombre").value=pf.nombre||""; $("#pf-monto").value=pf.monto??""; $("#pf-dia").value=pf.dia||1; pintaFijo(); cierra(); abre("sh-fijo"); }
 $("#pf-save").onclick=async()=>{ const n=$("#pf-nombre").value.trim(), m=parseFloat($("#pf-monto").value||0), d=parseInt($("#pf-dia").value||1);
   if(!n) return toast("¿Qué pagas?"); if(!(m>0)) return toast("Indica el monto");
-  await ins("pagos_fijos",{nombre:n,monto:n2(m),dia:Math.min(31,Math.max(1,d)),negocio:PF.negocio,categoria:PF.categoria,metodo:PF.metodo,tarjeta_id:PF.metodo==="tarjeta"?PF.tarjeta_id:null,activo:true,desde:iniMes(mesDe(hoyISO()))});
-  cierra(); render(); toast("Pago fijo creado"); };
+  const datos={nombre:n,monto:n2(m),dia:Math.min(31,Math.max(1,d)),negocio:PF.negocio,categoria:PF.categoria,metodo:PF.metodo,tarjeta_id:PF.metodo==="tarjeta"?PF.tarjeta_id:null};
+  if(PF.editando){ await upd("pagos_fijos",PF.editando,datos); cierra(); render(); toast("Pago fijo actualizado"); }
+  else { await ins("pagos_fijos",{...datos,activo:true,desde:iniMes(mesDe(hoyISO()))}); cierra(); render(); toast("Pago fijo creado"); } };
+
+/* ============================== ABONO ============================== */
+let ABONO=null;
+function abreAbono(cid){ const c=S.cuotas.find(x=>x.id===cid); if(!c) return; const p=S.prestamos.find(x=>x.id===c.prestamo_id), s=saldoCuota(c);
+  ABONO=cid; $("#ab-info").innerHTML=`<b>${esc(p?p.persona:"")}</b> · ${esc(c.etiqueta||("Cuota "+c.n))}<br>Falta cobrar <b>${S_(s.cap+s.inte)}</b>${s.inte>0&&s.cap>0?` — interés ${fmt(s.inte)} + capital ${fmt(s.cap)}`:""}`;
+  $("#ab-monto").value=""; $("#ab-monto").setAttribute("max",n2(s.cap+s.inte)); abre("sh-abono"); }
+$("#ab-save").onclick=async()=>{ if(!ABONO) return; const m=parseFloat($("#ab-monto").value||0); if(!(m>0)) return toast("Escribe cuánto te pagó"); const c=S.cuotas.find(x=>x.id===ABONO);
+  await abonaCuota(ABONO,m); ABONO=null; cierra(); render(); if(c) detallePrestamo(c.prestamo_id); };
 
 /* ============================== ACCIONES ============================== */
 async function cobraCuota(id){
   const c=S.cuotas.find(x=>x.id===id); if(!c) return; const p=S.prestamos.find(x=>x.id===c.prestamo_id); const f=hoyISO(), quien=p?p.persona:"deudor";
+  const s=saldoCuota(c);
+  if(s.cap<=0&&s.inte<=0){ await upd("cuotas",id,{estado:"cobrado",fecha_cobro:c.fecha_cobro||f}); return; }
+  if(s.cap>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Capital devuelto",descripcion:quien+" — devuelve capital",monto:s.cap,metodo:"caja",pl:false,creado:new Date().toISOString(),ref:id});
+  if(s.inte>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Interés",descripcion:quien+" — "+(c.etiqueta||"interés"),monto:s.inte,metodo:"caja",pl:true,creado:new Date().toISOString(),ref:id});
   await upd("cuotas",id,{estado:"cobrado",fecha_cobro:f});
-  if(+c.capital>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Capital devuelto",descripcion:quien+" — devuelve capital",monto:n2(c.capital),metodo:"caja",pl:false,creado:new Date().toISOString(),ref:id});
-  if(+c.interes>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Interés",descripcion:quien+" — "+(c.etiqueta||"interés"),monto:n2(c.interes),metodo:"caja",pl:true,creado:new Date().toISOString(),ref:id});
-  toast("Cobrado "+S_((+c.capital||0)+(+c.interes||0))+(+c.interes>0?" · "+S_(c.interes)+" de ganancia":""));
+  toast("Cobrado "+S_(s.cap+s.inte)+(s.inte>0?" · "+S_(s.inte)+" de ganancia":""));
+}
+/* abono parcial: primero cubre el interés, lo que sobra baja el capital */
+async function abonaCuota(id,monto){
+  const c=S.cuotas.find(x=>x.id===id); if(!c) return; const p=S.prestamos.find(x=>x.id===c.prestamo_id); const f=hoyISO(), quien=p?p.persona:"deudor";
+  const s=saldoCuota(c), m=n2(Math.min(monto,s.cap+s.inte)); if(!(m>0)) return;
+  const pagoInt=n2(Math.min(m,s.inte)), pagoCap=n2(m-pagoInt);
+  if(pagoInt>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Interés",descripcion:quien+" — abono interés",monto:pagoInt,metodo:"caja",pl:true,creado:new Date().toISOString(),ref:id});
+  if(pagoCap>0) await ins("movimientos",{fecha:f,tipo:"ingreso",negocio:NEG_PREST,categoria:"Capital devuelto",descripcion:quien+" — abono capital",monto:pagoCap,metodo:"caja",pl:false,creado:new Date().toISOString(),ref:id});
+  const s2=saldoCuota(c); if(s2.cap<=0&&s2.inte<=0) await upd("cuotas",id,{estado:"cobrado",fecha_cobro:f});
+  toast("Abono de "+S_(m));
 }
 async function deshaceCuota(id){ await upd("cuotas",id,{estado:"pendiente",fecha_cobro:null}); for(const m of S.movimientos.filter(m=>m.ref===id)) await del("movimientos",m.id); }
 async function pagaAporte(id){ const a=S.aportes.find(x=>x.id===id); if(!a) return; const j=S.juntas.find(x=>x.id===a.junta_id);
@@ -1268,7 +1358,7 @@ async function pagaFijo(id,ym){ const pf=S.pagos_fijos.find(x=>x.id===id); if(!p
   toast(pf.nombre+" pagado"); }
 
 document.body.addEventListener("click", async ev=>{
-  const b=ev.target.closest("[data-go],[data-pend],[data-edit],[data-cn],[data-fh],[data-neg],[data-verp],[data-delp],[data-verj],[data-delj],[data-cobrarj],[data-cuota],[data-uncuota],[data-aporte],[data-unaporte],[data-pagotar],[data-vertar],[data-deltar],[data-verfijo],[data-delfijo],[data-renneg]");
+  const b=ev.target.closest("[data-go],[data-pend],[data-edit],[data-cn],[data-fh],[data-neg],[data-verp],[data-delp],[data-editp],[data-verj],[data-delj],[data-editj],[data-cobrarj],[data-cuota],[data-uncuota],[data-abono],[data-aporte],[data-unaporte],[data-pagotar],[data-vertar],[data-deltar],[data-edittar],[data-verfijo],[data-delfijo],[data-editfijo],[data-renneg]");
   if(!b) return; const d=b.dataset;
   if(d.go!==undefined){ ver(d.go); return; }
   if(d.cn!==undefined){ NEG_F=d.cn; rCurva(); return; }
@@ -1281,18 +1371,23 @@ document.body.addEventListener("click", async ev=>{
     render(); return; }
   if(d.pagotar){ abreRegistro({tipo:"pago_tarjeta",tarjeta_id:d.pagotar,txt:String(Math.max(0,deudaEn(hoyISO(),d.pagotar)))}); return; }
   if(d.vertar){ detalleTarjeta(d.vertar); return; }
+  if(d.edittar){ editaTarjeta(d.edittar); return; }
   if(d.deltar){ if(!confirm("¿Eliminar esta tarjeta? Los movimientos se quedan.")) return; await del("tarjetas",d.deltar); render(); return; }
   if(d.verfijo){ detalleFijo(d.verfijo); return; }
+  if(d.editfijo){ editaFijo(d.editfijo); return; }
   if(d.delfijo){ if(!confirm("¿Eliminar este pago fijo? Los pagos ya hechos se quedan en el historial.")) return; await del("pagos_fijos",d.delfijo); cierra(); render(); return; }
   if(d.cobrarj){ await cobraJunta(d.cobrarj); render(); return; }
   if(d.verp){ detallePrestamo(d.verp); return; }
+  if(d.editp){ editaPrestamo(d.editp); return; }
   if(d.verj){ detalleJunta(d.verj); return; }
+  if(d.editj){ editaJunta(d.editj); return; }
   if(d.delp){ if(!confirm("¿Eliminar este préstamo y sus cuotas? Los movimientos ya registrados se quedan.")) return;
     for(const c of S.cuotas.filter(c=>c.prestamo_id===d.delp)) await del("cuotas",c.id); await del("prestamos",d.delp); cierra(); render(); return; }
   if(d.delj){ if(!confirm("¿Eliminar esta junta y sus aportes? Los movimientos ya registrados se quedan.")) return;
     for(const a of S.aportes.filter(a=>a.junta_id===d.delj)) await del("aportes",a.id); await del("juntas",d.delj); cierra(); render(); return; }
   if(d.uncuota){ await deshaceCuota(d.uncuota); render(); detallePrestamo(d.p); return; }
   if(d.cuota){ await cobraCuota(d.cuota); render(); detallePrestamo(d.p); return; }
+  if(d.abono){ abreAbono(d.abono); return; }
   if(d.unaporte){ await deshaceAporte(d.unaporte); render(); detalleJunta(d.j); return; }
   if(d.aporte){ await pagaAporte(d.aporte); render(); detalleJunta(d.j); return; }
   if(d.renneg){ const n=S.negocios.find(x=>x.id===d.renneg); const nuevo=prompt("Nuevo nombre para "+n.nombre, n.nombre); if(!nuevo||nuevo===n.nombre) return;
@@ -1323,18 +1418,20 @@ function detalleTarjeta(tid){ const t=S.tarjetas.find(x=>x.id===tid); if(!t) ret
 function detalleFijo(id){ const pf=S.pagos_fijos.find(x=>x.id===id); if(!pf) return; const ms=S.movimientos.filter(m=>m.ref&&m.ref.startsWith(pf.id+":")).sort(ordenMov);
   $("#d-tit").textContent=pf.nombre;
   $("#d-body").innerHTML=`<div class="prev" style="margin-top:14px"><b>${S_(pf.monto)}</b> cada día ${pf.dia} · ${dot(negColor(pf.negocio))} ${esc(pf.negocio||"")} · ${esc(pf.categoria||"")}${pf.metodo==="tarjeta"?" · con tarjeta":""}</div>
-    <div class="card-f"><button class="btn sm dan" data-delfijo="${pf.id}">Eliminar pago fijo</button></div>
+    <div class="card-f"><button class="btn sm" data-editfijo="${pf.id}">Editar</button><button class="btn sm dan" data-delfijo="${pf.id}">Eliminar pago fijo</button></div>
     <h2 class="sec">Pagos hechos</h2>${ms.length?`<div class="ledger">${ms.map(m=>fila(m,false)).join("")}</div>`:`<div class="empty">Todavía no has pagado ninguno.</div>`}`; abre("sh-det"); }
 function detallePrestamo(pid){ const p=S.prestamos.find(x=>x.id===pid); if(!p) return; const cs=S.cuotas.filter(c=>c.prestamo_id===pid).sort((a,b)=>(a.n||0)-(b.n||0)), hoy=hoyISO();
   $("#d-tit").textContent=p.persona;
   $("#d-body").innerHTML=`<div class="prev" style="margin-top:14px">Capital <b>${S_(p.capital)}</b>${+p.tasa?" · "+(+p.tasa)+"% mensual":" · sin interés"} · entregado el <b>${fLarga(p.inicio)}</b></div>
-    <div class="ledger" style="margin-top:14px">${cs.map(c=>{ const m=n2((+c.capital)+(+c.interes)), cob=c.estado==="cobrado";
-      return `<div class="row ${cob?"in":(c.fecha&&c.fecha<hoy?"late":"soon")}"><div class="row-main"><div class="row-t"><span class="nm">${esc(c.etiqueta||("Cuota "+c.n))}</span>${cob?'<span class="pill ok">cobrada</span>':(c.fecha&&c.fecha<hoy?'<span class="pill late">vencida</span>':"")}</div>
-        <div class="row-s">${fLarga(c.fecha)}${+c.capital?" · capital "+fmt(c.capital):""}${+c.interes?" · interés "+fmt(c.interes):""}</div></div>
-        <div class="row-n">${fmt(m)}</div><button class="row-act" data-${cob?"uncuota":"cuota"}="${c.id}" data-p="${pid}">${cob?"Deshacer":"Cobré"}</button></div>`; }).join("")}</div>`; abre("sh-det"); }
+    <div class="card-f"><button class="btn sm" data-editp="${pid}">Editar préstamo</button></div>
+    <div class="ledger" style="margin-top:14px">${cs.map(c=>{ const orig=n2((+c.capital)+(+c.interes)), cob=c.estado==="cobrado", y=cobradoCuota(c.id), pagado=n2(y.cap+y.inte), falta=Math.max(0,n2(orig-pagado)), parcial=!cob&&pagado>0;
+      return `<div class="row ${cob?"in":(c.fecha&&c.fecha<hoy?"late":"soon")}"><div class="row-main"><div class="row-t"><span class="nm">${esc(c.etiqueta||("Cuota "+c.n))}</span>${cob?'<span class="pill ok">cobrada</span>':parcial?'<span class="pill soon">abonada</span>':(c.fecha&&c.fecha<hoy?'<span class="pill late">vencida</span>':"")}</div>
+        <div class="row-s">${fLarga(c.fecha)}${parcial?` · abonó ${fmt(pagado)}, falta ${fmt(falta)}`:(+c.capital?" · capital "+fmt(c.capital):"")+(+c.interes?" · interés "+fmt(c.interes):"")}</div></div>
+        <div class="row-n">${fmt(parcial?falta:orig)}</div>${cob?`<button class="row-act" data-uncuota="${c.id}" data-p="${pid}">Deshacer</button>`:`<button class="row-act in" data-cuota="${c.id}" data-p="${pid}">Cobré</button><button class="row-act" data-abono="${c.id}" style="margin-left:6px">Parte</button>`}</div>`; }).join("")}</div>`; abre("sh-det"); }
 function detalleJunta(jid){ const j=S.juntas.find(x=>x.id===jid); if(!j) return; const as=S.aportes.filter(a=>a.junta_id===jid).sort((a,b)=>(a.n||0)-(b.n||0)), hoy=hoyISO(), tot=as.reduce((a,b)=>a+ +b.monto,0);
   $("#d-tit").textContent=j.nombre;
   $("#d-body").innerHTML=`<div class="prev" style="margin-top:14px">${as.length} aportes de <b>${S_(j.aporte)}</b> = <b>${S_(tot)}</b><br>Cobras <b>${S_(j.monto_cobro)}</b> el <b>${fLarga(j.fecha_cobro)}</b>${j.cobrado?" · ya cobrada":""}</div>
+    <div class="card-f"><button class="btn sm" data-editj="${jid}">Editar junta</button></div>
     <div class="ledger" style="margin-top:14px">${as.map(a=>{ const pag=a.estado==="pagado";
       return `<div class="row ${pag?"out":(a.fecha<hoy?"late":"soon")}"><div class="row-main"><div class="row-t"><span class="nm">Aporte ${a.n}</span>${pag?'<span class="pill ok">pagado</span>':(a.fecha<hoy?'<span class="pill late">atrasado</span>':"")}</div><div class="row-s">${fLarga(a.fecha)}</div></div>
         <div class="row-n">${fmt(a.monto)}</div><button class="row-act" data-${pag?"unaporte":"aporte"}="${a.id}" data-j="${jid}">${pag?"Deshacer":"Pagué"}</button></div>`; }).join("")}</div>`; abre("sh-det"); }
@@ -1342,6 +1439,23 @@ function detalleJunta(jid){ const j=S.juntas.find(x=>x.id===jid); if(!j) return;
 /* ============================== AJUSTES ============================== */
 $("#s-save").onclick=async()=>{ await guardaConfig({saldo_inicial:n2(parseFloat($("#s-saldo").value||0)),fecha_inicio:$("#s-fecha").value||hoyISO()}); render(); toast("Guardado"); };
 $("#s-export").onclick=()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:"application/json"})); a.download="libreta-"+hoyISO()+".json"; a.click(); };
+$("#s-import").onclick=()=>$("#s-import-file").click();
+$("#s-import-file").onchange=async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file) return;
+  let j; try{ j=JSON.parse(await file.text()); }catch(err){ return toast("Ese archivo no se puede leer"); }
+  if(!j||typeof j!=="object"||!TABLAS.some(t=>t==="config"?(j.config&&typeof j.config==="object"):Array.isArray(j[t]))) return toast("No parece una copia de Libreta");
+  const filas=TABLAS.reduce((a,t)=>a+(t==="config"?((j.config&&j.config.id)?1:0):(Array.isArray(j[t])?j[t].length:0)),0);
+  if(!confirm("Vas a reemplazar TODO lo de ahora por esta copia ("+filas+" registros). Lo actual se pierde. ¿Seguro?")) return;
+  await importa(j); render(); ver("hoy"); toast("Copia restaurada"); };
+/* restaurar: deja los datos igual que la copia (mismos ids) y encola el cambio para tu cuenta */
+async function importa(j){
+  const nuevo={config:(j.config&&j.config.id)?{...j.config}:{id:uid(),saldo_inicial:0,fecha_inicio:hoyISO()}};
+  for(const t of TABLAS) if(t!=="config") nuevo[t]=(Array.isArray(j[t])?j[t]:[]).filter(x=>x&&x.id).map(x=>({...x}));
+  const dels=[];
+  for(const t of TABLAS){ if(t==="config"){ if(S.config.id&&S.config.id!==nuevo.config.id) dels.push({t:"config",op:"del",id:S.config.id}); }
+    else { const nid=new Set(nuevo[t].map(x=>x.id)); for(const f of S[t]) if(f.id&&!nid.has(f.id)) dels.push({t,op:"del",id:f.id}); } }
+  S=nuevo; COLA=dels.concat([{t:"config",op:"set",id:S.config.id,d:{...S.config}}]); FALLIDOS=[];
+  for(const t of TABLAS) if(t!=="config") for(const f of S[t]) COLA.push({t,op:"ins",id:f.id,d:{...f}});
+  guardaCola(); guardaLocal(); await normaliza(); sincroniza(); }
 $("#s-addneg").onclick=async()=>{ const n=prompt("Nombre del negocio"); if(!n) return; const cols=["#C77DFF","#F25F5C","#70D6FF","#FFD166","#06D6A0"];
   await ins("negocios",{nombre:n.trim(),color:cols[S.negocios.length%cols.length],orden:S.negocios.length+1}); render(); };
 $("#s-wipe").onclick=async()=>{
