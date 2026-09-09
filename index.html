@@ -55,6 +55,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.7)}
 .top h1{font-size:13px;font-weight:500;color:var(--mute);margin:0;letter-spacing:.02em}
 .gear{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--mute);background:var(--surface);border:1px solid var(--line)}
 .gear svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+.gear{position:relative} .gear.pend::after,.gear.mal::after{content:"";position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)} .gear.mal::after{background:var(--out)}
 
 /* ---------- hero ---------- */
 .hero-num{font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-top:6px;text-shadow:0 0 28px rgba(217,178,106,.18)}
@@ -471,7 +472,7 @@ const SUPA = {
   url: "https://gxdcwgbljfkslziaxopb.supabase.co",
   key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4ZGN3Z2JsamZrc2x6aWF4b3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3MjQzMjMsImV4cCI6MjEwNDMwMDMyM30.DkB6vAq42cEpP_wutYg4iNtbaXDgd09PdfcKJpqIpR8",
 };
-let SESION = null, SIN_CUENTA = false, conexionError = "";
+let SESION = null, SIN_CUENTA = false;
 const REMOTO = !!(SUPA.url && SUPA.key);
 const SS = "libreta.sesion", LS = "libreta.v2", LP = "libreta.prefs";
 const logueado = () => !!(REMOTO && SESION && SESION.uid);
@@ -530,39 +531,79 @@ function limpia(o){ const r={}; for(const k in o) r[k]=(o[k]===""?null:o[k]); re
 function guardaLocal(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} }
 function guardaPref(){ try{ localStorage.setItem(LP,JSON.stringify(PREF)); }catch(e){} }
 
-async function api(tabla, metodo, cuerpo, filtro){
+/* ---------- cola de cambios por subir ----------
+   Todo cambio se aplica primero aquí y se anota en COLA. Con sesión e internet,
+   la cola se sube en orden; si algo falla se reintenta más tarde. Cerrar la app
+   o quedarse sin señal no pierde nada. */
+const LC = "libreta.cola";
+let COLA = [], FALLIDOS = [];
+const SYNC = { error:"", sesionVencida:false, ultimaBajada:0, enVuelo:null };
+function guardaCola(){ try{ localStorage.setItem(LC,JSON.stringify({cola:COLA,fallidos:FALLIDOS})); }catch(e){} }
+function cargaCola(){ try{ const j=JSON.parse(localStorage.getItem(LC)||"{}"); COLA=j.cola||[]; FALLIDOS=j.fallidos||[]; }catch(e){ COLA=[]; FALLIDOS=[]; } }
+/* una sola operación por fila: ins+upd se funden, ins+del se anulan, upd+del queda del */
+function encola(t,op,id,d){
+  const i=COLA.findIndex(x=>x.t===t&&x.id===id), prev=i>=0?COLA[i]:null;
+  if(!prev) COLA.push(d?{t,op,id,d}:{t,op,id});
+  else if(op==="del"){ if(prev.op==="ins"&&prev!==SYNC.enVuelo) COLA.splice(i,1); else COLA[i]={t,op:"del",id}; }
+  else if(op==="upd"&&prev.op!=="del") COLA[i]={...prev,d:{...(prev.d||{}),...d}};
+  else COLA[i]={t,op,id,d};
+  guardaCola(); pintaEstado();
+}
+function pintaEstado(){
+  const g=document.querySelector(".gear"); if(!g) return;
+  const mal=SYNC.sesionVencida||FALLIDOS.length>0, pend=COLA.length>0&&logueado();
+  g.classList.toggle("mal",mal); g.classList.toggle("pend",pend&&!mal);
+  const v=document.getElementById("v-set"); if(v&&v.classList.contains("on")&&typeof rSetEstado==="function") rSetEstado();
+}
+
+/* ---------- red ---------- */
+function errorRed(msg,status,transitorio){ const e=new Error(msg); e.status=status||0; e.transitorio=!!transitorio; return e; }
+async function pide(url,opciones){
+  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),15000);
+  try{ return await fetch(url,{...opciones,signal:ctl.signal}); }
+  catch(e){ throw errorRed("Sin conexión",0,true); }
+  finally{ clearTimeout(tm); }
+}
+async function api(tabla, metodo, cuerpo, o={}){
+  if(SESION&&SESION.expira&&Date.now()>SESION.expira) await refrescar();
   const tok = SESION ? SESION.access_token : SUPA.key;
   const h = { apikey:SUPA.key, Authorization:"Bearer "+tok, "Content-Type":"application/json" };
-  let u = SUPA.url.replace(/\/$/,"")+"/rest/v1/"+tabla;
-  if(metodo==="GET") u += "?select=*";
-  if(filtro) u += "?id=eq."+encodeURIComponent(filtro);
-  if(metodo==="POST") h.Prefer = "return=representation";
-  const r = await fetch(u,{method:metodo,headers:h,body:cuerpo?JSON.stringify(cuerpo):undefined});
-  if(!r.ok) throw new Error(tabla+" "+r.status+" "+(await r.text()).slice(0,140));
+  const pref=[]; if(o.prefer) pref.push(o.prefer); if(o.rango){ h.Range=o.rango; pref.push("count=exact"); } if(pref.length) h.Prefer=pref.join(",");
+  const q=[]; if(o.id) q.push("id=eq."+encodeURIComponent(o.id)); if(o.query) q.push(o.query);
+  const r = await pide(SUPA.url.replace(/\/$/,"")+"/rest/v1/"+tabla+(q.length?"?"+q.join("&"):""),{method:metodo,headers:h,body:cuerpo?JSON.stringify(cuerpo):undefined});
+  if(r.status===401&&!o.reintento&&SESION&&await refrescar()) return api(tabla,metodo,cuerpo,{...o,reintento:true});
+  if(!r.ok) throw errorRed(tabla+" "+r.status+" "+(await r.text()).slice(0,140), r.status, r.status>=500||r.status===408||r.status===429);
+  if(o.rango){ const filas=await r.json().catch(()=>[]), total=+((r.headers.get("content-range")||"").split("/")[1]||0); return {filas:filas||[],total}; }
   return r.status===204 ? null : r.json().catch(()=>null);
 }
 
 /* ---------- cuenta ---------- */
 async function auth(ruta,cuerpo){
-  const r = await fetch(SUPA.url.replace(/\/$/,"")+"/auth/v1/"+ruta,{method:"POST",
+  const r = await pide(SUPA.url.replace(/\/$/,"")+"/auth/v1/"+ruta,{method:"POST",
     headers:{apikey:SUPA.key,"Content-Type":"application/json"},body:JSON.stringify(cuerpo)});
   const j = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(j.error_description||j.msg||j.message||("error "+r.status));
+  if(!r.ok) throw errorRed(j.error_description||j.msg||j.message||("error "+r.status), r.status, r.status>=500||r.status===408||r.status===429);
   return j;
 }
 function fijaSesion(j){
   if(!j||!j.access_token) throw new Error("Supabase no devolvió sesión. Revisa si el correo necesita confirmación.");
   SESION = { access_token:j.access_token, refresh_token:j.refresh_token, expira:Date.now()+((j.expires_in||3600)-60)*1000,
-             uid:j.user?j.user.id:null, email:j.user?j.user.email:"" };
+             uid:j.user?j.user.id:(SESION?SESION.uid:null), email:j.user?j.user.email:(SESION?SESION.email:"") };
+  SYNC.sesionVencida=false;
   try{ localStorage.setItem(SS,JSON.stringify(SESION)); }catch(e){}
   return SESION;
 }
 const entrar    = (email,password) => auth("token?grant_type=password",{email,password}).then(fijaSesion);
 const registrar = (email,password) => auth("signup",{email,password}).then(j=>j.access_token?fijaSesion(j):null);
-async function refrescar(){
-  if(!SESION||!SESION.refresh_token) return null;
-  try{ return fijaSesion(await auth("token?grant_type=refresh_token",{refresh_token:SESION.refresh_token})); }
-  catch(e){ salir(); return null; }
+/* renueva la sesión. Si el servidor la rechaza, la cierra; si solo falló la red, la conserva. */
+let refrescando=null;
+function refrescar(){
+  if(!SESION||!SESION.refresh_token) return Promise.resolve(null);
+  if(refrescando) return refrescando;
+  refrescando = auth("token?grant_type=refresh_token",{refresh_token:SESION.refresh_token}).then(fijaSesion)
+    .catch(e=>{ if(e.status&&!e.transitorio){ salir(); SYNC.sesionVencida=true; SYNC.error="Tu sesión venció"; pintaEstado(); } return null; })
+    .finally(()=>{ refrescando=null; });
+  return refrescando;
 }
 function salir(){ SESION=null; try{ localStorage.removeItem(SS); }catch(e){} }
 
@@ -570,28 +611,23 @@ function salir(){ SESION=null; try{ localStorage.removeItem(SS); }catch(e){} }
 async function cargar(){
   try{ const raw=localStorage.getItem(LS); if(raw){ const j=JSON.parse(raw); for(const t of TABLAS) if(j[t]) S[t]=j[t]; } }catch(e){}
   try{ PREF = JSON.parse(localStorage.getItem(LP)||"{}"); }catch(e){ PREF={}; }
-  if(!S.config.id) S.config = { id:uid(), saldo_inicial:0, fecha_inicio:hoyISO() };
+  const primeraVez=(()=>{ try{ return localStorage.getItem(LC)===null; }catch(e){ return false; } })();
+  cargaCola();
+  if(primeraVez){   // primera vez con esta versión: pone en cola todo lo local, por si algo nunca llegó a subirse
+    for(const t of TABLAS) if(t!=="config") for(const f of S[t]) if(f&&f.id) COLA.push({t,op:"ins",id:f.id,d:{...f}});
+    if(S.config.id) COLA.push({t:"config",op:"set",id:S.config.id,d:{...S.config}});
+    guardaCola();
+  }
+  if(!S.config.id){ S.config = { id:uid(), saldo_inicial:0, fecha_inicio:hoyISO() }; encola("config","set",S.config.id,{...S.config}); }
   if(REMOTO){
     try{ const raw=localStorage.getItem(SS); if(raw) SESION=JSON.parse(raw); }catch(e){}
-    if(SESION && SESION.expira && Date.now()>SESION.expira) await refrescar();
-    if(logueado()) await bajaTodo();
+    if(logueado()){
+      const antes=JSON.stringify(S);
+      const p=bajaTodo().then(()=>{ if(JSON.stringify(S)!==antes&&typeof render==="function") render(); }).catch(e=>{ SYNC.error=e.message; }).finally(()=>{ pintaEstado(); sincroniza(); });
+      if(!S.movimientos.length&&!S.negocios.length) await p;   // primera vez en este dispositivo: espera a tener los datos
+    }
   }
   await normaliza();
-}
-async function bajaTodo(){
-  try{
-    const res = await Promise.all(TABLAS.map(t=>api(t,"GET").catch(e=>{ if(/404|42P01/.test(e.message)) return []; throw e; })));
-    const soloLocal=[];
-    TABLAS.forEach((t,i)=>{
-      const rem=res[i]||[];
-      if(t==="config"){ if(rem[0]) S.config=rem[0]; else if(S.config&&S.config.id) soloLocal.push(["config",S.config]); return; }
-      const ids=new Set(rem.map(x=>x.id));
-      const huer=(S[t]||[]).filter(x=>x.id&&!ids.has(x.id));
-      S[t]=rem.concat(huer); huer.forEach(x=>soloLocal.push([t,x]));
-    });
-    conexionError=""; guardaLocal();
-    for(const [t,f] of soloLocal){ try{ await api(t,"POST",limpia({...f,uid:SESION.uid})); }catch(e){ console.warn("no subió",t,e.message); } }
-  }catch(e){ conexionError=e.message; }
 }
 /* negocios por defecto + campos nuevos en filas viejas */
 async function normaliza(){
@@ -604,32 +640,84 @@ async function normaliza(){
     if(Object.keys(patch).length) await upd("movimientos",m.id,patch);
   }
 }
+/* baja una tabla completa por tandas, sin importar el tope de filas del servidor */
+async function bajaTabla(t){
+  const out=[];
+  for(;;){ const r=await api(t,"GET",null,{query:"select=*&order=id",rango:out.length+"-"+(out.length+999)}).catch(e=>{ if(/404|42P01/.test(e.message)) return {filas:[],total:0}; throw e; });
+    out.push(...r.filas); if(!r.filas.length||out.length>=r.total) break; }
+  return out;
+}
+/* lo que hay en la cuenta manda, salvo lo que sigue en la cola por subir */
+async function bajaTodo(){
+  if(!logueado()) return;
+  const res = await Promise.all(TABLAS.map(bajaTabla));   // todo o nada: si una tabla falla, no se toca S
+  TABLAS.forEach((t,i)=>{
+    const rem=res[i]||[];
+    if(t==="config"){
+      const iq=COLA.findIndex(x=>x.t==="config"), op=iq>=0?COLA[iq]:null;
+      if(rem[0]){ if(op&&op.id===rem[0].id) S.config={...rem[0],...op.d}; else { S.config=rem[0]; if(op) COLA.splice(iq,1); } }
+      else if(!op) encola("config","set",S.config.id,{...S.config});
+      return;
+    }
+    let filas=rem.slice(); const ids=new Set(filas.map(x=>x.id));
+    for(const op of COLA.filter(x=>x.t===t)){
+      if(op.op==="del") filas=filas.filter(r=>r.id!==op.id);
+      else if(op.op==="upd"){ if(ids.has(op.id)) filas=filas.map(r=>r.id===op.id?{...r,...op.d}:r); else COLA.splice(COLA.indexOf(op),1); }   // la borraron desde otro dispositivo
+      else if(t==="negocios"&&!ids.has(op.id)&&rem.some(r=>r.nombre===op.d.nombre)) COLA.splice(COLA.indexOf(op),1);                        // ya existe uno con ese nombre
+      else if(ids.has(op.id)) filas=filas.map(r=>r.id===op.id?{...r,...op.d}:r);
+      else filas.push({...op.d});
+    }
+    S[t]=filas;
+  });
+  SYNC.ultimaBajada=Date.now(); SYNC.error="";
+  guardaLocal(); guardaCola(); pintaEstado();
+}
 
-async function ins(tabla,fila){
-  fila.id = fila.id||uid();
-  if(logueado()&&!conexionError){ try{ await api(tabla,"POST",limpia({...fila,uid:SESION.uid})); }
-    catch(e){ conexionError=e.message; toast("Sin conexión — guardado local"); } }
-  S[tabla].push(fila); guardaLocal(); return fila;
+/* ---------- subir la cola ---------- */
+function ejecuta(op){
+  if(op.op==="del") return api(op.t,"DELETE",null,{id:op.id});
+  if(op.op==="upd") return api(op.t,"PATCH",limpia(op.d),{id:op.id});
+  return api(op.t,"POST",limpia({...op.d,uid:SESION.uid}),{prefer:"resolution=merge-duplicates,return=minimal"});   // crea la fila o la pisa si ya existe
 }
-async function upd(tabla,id,patch){
-  const f=S[tabla].find(x=>x.id===id); if(!f) return;
-  Object.assign(f,patch);
-  if(logueado()&&!conexionError){ try{ await api(tabla,"PATCH",limpia(patch),id); }
-    catch(e){ conexionError=e.message; toast("Sin conexión — guardado local"); } }
-  guardaLocal(); return f;
+let subiendo=null;
+function sincroniza(){
+  if(!logueado()||!COLA.length){ pintaEstado(); return Promise.resolve(); }
+  if(subiendo) return subiendo;
+  const habiaError=!!SYNC.error;
+  subiendo=(async()=>{
+    while(COLA.length&&logueado()){
+      const op=COLA[0]; SYNC.enVuelo=op;
+      try{ await ejecuta(op); if(COLA[0]===op) COLA.shift(); guardaCola(); SYNC.error=""; }     // si cambió mientras subía, se vuelve a mandar
+      catch(e){
+        if(e.transitorio||e.status===401){ SYNC.error=e.status===401?"Tu sesión venció":"Sin conexión"; break; }
+        FALLIDOS.push({...op,error:e.message}); if(COLA[0]===op) COLA.shift(); guardaCola();   // el servidor lo rechazó: se aparta y no bloquea al resto
+      }
+    }
+    SYNC.enVuelo=null;
+    if(habiaError&&!SYNC.error&&!COLA.length) toast("Cambios subidos");
+    pintaEstado();
+  })().finally(()=>{ subiendo=null; });
+  return subiendo;
 }
-async function del(tabla,id){
-  if(logueado()&&!conexionError){ try{ await api(tabla,"DELETE",null,id); }catch(e){ conexionError=e.message; } }
-  S[tabla]=S[tabla].filter(x=>x.id!==id); guardaLocal();
-}
-async function guardaConfig(patch){
-  Object.assign(S.config,patch);
-  if(logueado()&&!conexionError){
-    try{ await api("config","PATCH",limpia(patch),S.config.id); }
-    catch(e){ try{ await api("config","POST",limpia({...S.config,uid:SESION.uid})); }catch(e2){ conexionError=e2.message; } }
+/* al volver a la app o recuperar señal: sube lo pendiente y refresca lo de la cuenta */
+async function despierta(){
+  if(!logueado()) return;
+  await sincroniza();
+  if(!COLA.length&&Date.now()-SYNC.ultimaBajada>3*60e3){
+    const antes=JSON.stringify(S);
+    try{ await bajaTodo(); }catch(e){ SYNC.error=e.message; }
+    if(JSON.stringify(S)!==antes&&typeof render==="function") render();
   }
-  guardaLocal();
+  pintaEstado();
 }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") despierta(); });
+window.addEventListener("online",despierta);
+setInterval(()=>{ if(COLA.length&&logueado()) sincroniza(); },45000);
+
+async function ins(tabla,fila){ fila.id=fila.id||uid(); S[tabla].push(fila); guardaLocal(); encola(tabla,"ins",fila.id,{...fila}); sincroniza(); return fila; }
+async function upd(tabla,id,patch){ const f=S[tabla].find(x=>x.id===id); if(!f) return; Object.assign(f,patch); guardaLocal(); encola(tabla,"upd",id,{...patch}); sincroniza(); return f; }
+async function del(tabla,id){ S[tabla]=S[tabla].filter(x=>x.id!==id); guardaLocal(); encola(tabla,"del",id); sincroniza(); }
+async function guardaConfig(patch){ Object.assign(S.config,patch); guardaLocal(); encola("config","set",S.config.id,{...S.config}); sincroniza(); }
 
 /* ============================================================
    CÁLCULO
@@ -991,16 +1079,32 @@ function rHist(){
 /* ---------- AJUSTES ---------- */
 function rSet(){
   $("#s-saldo").value=S.config.saldo_inicial??0; $("#s-fecha").value=S.config.fecha_inicio||hoyISO();
-  const est = !REMOTO ? `<div class="info">Guardando solo en este dispositivo.</div>`
-    : SIN_CUENTA ? `<div class="warnbox">Estás sin cuenta: lo que registres queda solo en este navegador.<br><br><button class="btn sm" id="s-entrar">Entrar con mi correo</button></div>`
-    : conexionError ? `<div class="err">No se pudo sincronizar. Sigues trabajando en local y nada se pierde.<br><br>${esc(conexionError)}${/pagos_fijos|tarjetas|negocios|404/.test(conexionError)?"<br><br><b>Falta correr el SQL de esta versión en Supabase.</b>":""}</div>`
-    : logueado() ? `<div class="ok">Sincronizado como <b>${esc(SESION.email||"")}</b><br><br><button class="btn sm" id="s-salir">Cerrar sesión</button></div>`
-    : `<div class="warnbox">Sin sesión iniciada.</div>`;
-  $("#set-conn").innerHTML=est;
-  const bs=$("#s-salir"); if(bs) bs.onclick=()=>{ salir(); location.reload(); };
-  const be=$("#s-entrar"); if(be) be.onclick=()=>{ SIN_CUENTA=false; abre("sh-login"); };
+  rSetEstado();
   $("#s-neg").innerHTML=`<div class="ledger">${negOrden().map(n=>`<div class="row"><div class="row-main"><div class="row-t">${dot(n.color)}&nbsp;<span class="nm">${esc(n.nombre)}</span></div></div>
     <button class="row-act" data-renneg="${n.id}">Renombrar</button></div>`).join("")}</div>`;
+}
+function rSetEstado(){
+  const n=COLA.length, f=FALLIDOS.length, pl=(k,s)=>k+" cambio"+(k===1?"":"s")+(s||"");
+  let est;
+  if(!REMOTO) est=`<div class="info">Guardando solo en este dispositivo.</div>`;
+  else if(!logueado()) est = SYNC.sesionVencida
+    ? `<div class="warnbox">Tu sesión venció. Todo sigue guardado en este dispositivo${n?" ("+pl(n," por subir")+")":""}. Entra de nuevo y se sube solo.<br><br><button class="btn sm" id="s-entrar">Entrar de nuevo</button></div>`
+    : `<div class="warnbox">Estás sin cuenta: lo que registres queda solo en este navegador.<br><br><button class="btn sm" id="s-entrar">Entrar con mi correo</button></div>`;
+  else est=`<div class="ok">Sincronizado como <b>${esc(SESION.email||"")}</b><br>${n
+      ? `<span style="color:var(--gold)">${pl(n," por subir")}${SYNC.error?" · "+esc(SYNC.error):""}</span> <button class="btn sm" id="s-subir" style="margin-left:6px">Subir ahora</button>`
+      : "Todo al día."}<br><br><button class="btn sm" id="s-salir">Cerrar sesión</button></div>`;
+  if(f) est+=`<div class="err">${pl(f)} que el servidor no aceptó:<br>${FALLIDOS.slice(0,3).map(x=>esc(x.t+" · "+x.error)).join("<br>")}${f>3?"<br>…":""}<br><br><button class="btn sm" id="s-reint">Reintentar</button> <button class="btn sm dan" id="s-desc">Descartar</button></div>`;
+  $("#set-conn").innerHTML=est;
+  const bs=$("#s-salir"); if(bs) bs.onclick=cerrarSesion;
+  const be=$("#s-entrar"); if(be) be.onclick=()=>{ SIN_CUENTA=false; MODO_REG=false; pintaLogin(); abre("sh-login"); };
+  const bu=$("#s-subir"); if(bu) bu.onclick=()=>{ toast("Subiendo…"); sincroniza(); };
+  const br=$("#s-reint"); if(br) br.onclick=()=>{ COLA.push(...FALLIDOS.map(({error,...o})=>o)); FALLIDOS=[]; guardaCola(); rSetEstado(); sincroniza(); };
+  const bd=$("#s-desc"); if(bd) bd.onclick=()=>{ if(!confirm("¿Descartar esos cambios? Se pierden para siempre.")) return; FALLIDOS=[]; guardaCola(); pintaEstado(); };
+}
+async function cerrarSesion(){
+  if(COLA.length) await sincroniza();
+  if(COLA.length&&!confirm("Hay "+COLA.length+" cambio"+(COLA.length===1?"":"s")+" sin subir. Si sales ahora se pierden. ¿Salir igual?")) return;
+  salir(); try{ localStorage.removeItem(LS); localStorage.removeItem(LC); }catch(e){} location.reload();
 }
 </script>
 <script>
@@ -1240,11 +1344,13 @@ $("#s-export").onclick=()=>{ const a=document.createElement("a"); a.href=URL.cre
 $("#s-addneg").onclick=async()=>{ const n=prompt("Nombre del negocio"); if(!n) return; const cols=["#C77DFF","#F25F5C","#70D6FF","#FFD166","#06D6A0"];
   await ins("negocios",{nombre:n.trim(),color:cols[S.negocios.length%cols.length],orden:S.negocios.length+1}); render(); };
 $("#s-wipe").onclick=async()=>{
-  if(!confirm(logueado()?"Esto borra todos tus datos, aquí y en Supabase. ¿Seguro?":"Esto borra todos tus datos de este dispositivo. ¿Seguro?")) return;
-  if(logueado()&&!conexionError){ for(const t of ["movimientos","cuotas","aportes","prestamos","juntas","pagos_fijos","tarjetas","negocios","config"])
-    for(const f of (t==="config"?[S.config]:S[t])){ try{ if(f&&f.id) await api(t,"DELETE",null,f.id); }catch(e){ console.warn(t,e.message); } } }
-  localStorage.removeItem(LS); S={config:{id:uid(),saldo_inicial:0,fecha_inicio:hoyISO()},negocios:[],movimientos:[],prestamos:[],cuotas:[],juntas:[],aportes:[],tarjetas:[],pagos_fijos:[]};
-  await normaliza(); render(); ver("hoy"); toast("Todo borrado"); };
+  if(!confirm(logueado()?"Esto borra todos tus datos, aquí y en tu cuenta. ¿Seguro?":"Esto borra todos tus datos de este dispositivo. ¿Seguro?")) return;
+  COLA=[]; FALLIDOS=[]; SYNC.enVuelo=null;
+  for(const t of ["movimientos","cuotas","aportes","prestamos","juntas","pagos_fijos","tarjetas","negocios"]) for(const f of S[t]) if(f&&f.id) COLA.push({t,op:"del",id:f.id});
+  if(S.config&&S.config.id) COLA.push({t:"config",op:"del",id:S.config.id});
+  S={config:{id:uid(),saldo_inicial:0,fecha_inicio:hoyISO()},negocios:[],movimientos:[],prestamos:[],cuotas:[],juntas:[],aportes:[],tarjetas:[],pagos_fijos:[]};
+  COLA.push({t:"config",op:"set",id:S.config.id,d:{...S.config}}); guardaCola(); guardaLocal();
+  await normaliza(); render(); ver("hoy"); toast("Todo borrado"); sincroniza(); };
 
 /* ============================== ACCESO ============================== */
 let MODO_REG=false;
@@ -1258,12 +1364,12 @@ $("#lg-go").onclick=async()=>{ const mail=$("#lg-mail").value.trim(), pass=$("#l
   $("#lg-go").disabled=true; $("#lg-go").textContent="Un momento…"; $("#lg-err").innerHTML="";
   try{ const r=MODO_REG?await registrar(mail,pass):await entrar(mail,pass);
     if(!r){ $("#lg-err").innerHTML=`<div class="err">Cuenta creada. Revisa tu correo para confirmarla y vuelve a entrar.</div>`; MODO_REG=false; pintaLogin(); return; }
-    await bajaTodo(); await normaliza(); cierra(); render(); toast("Hola de nuevo");
+    SIN_CUENTA=false; try{ await bajaTodo(); }catch(e){ SYNC.error=e.message; } await normaliza(); cierra(); render(); toast("Hola de nuevo"); sincroniza();
   }catch(e){ const m=String(e.message); $("#lg-err").innerHTML=`<div class="err">${/Invalid login/i.test(m)?"Correo o contraseña incorrectos.":/already registered/i.test(m)?"Ese correo ya tiene cuenta. Entra en vez de crearla.":/confirm/i.test(m)?"Falta confirmar el correo. Revisa tu bandeja.":esc(m)}</div>`; }
   finally{ $("#lg-go").disabled=false; pintaLogin(); } };
 
 /* ============================== ARRANQUE ============================== */
-(async()=>{ await cargar(); render(); if(REMOTO&&!logueado()){ pintaLogin(); abre("sh-login"); } })();
+(async()=>{ await cargar(); render(); pintaEstado(); if(REMOTO&&!logueado()){ pintaLogin(); abre("sh-login"); } })();
 </script>
 </body>
 </html>
