@@ -242,6 +242,7 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
   <div class="hero-num"><span class="cur">S/</span><span id="h-caja">0.00</span></div>
   <div class="hero-sub" id="h-sub"></div>
   <svg class="spark" id="spark" viewBox="0 0 320 54" preserveAspectRatio="none" aria-hidden="true"></svg>
+  <div id="h-cuentas" class="chips" style="margin-top:12px"></div>
 
   <div class="strip">
     <div><div class="k">Ganancia del mes</div><div class="v" id="h-mes">S/ 0</div></div>
@@ -325,9 +326,10 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 <section id="v-set" class="view">
   <div class="top"><h1>Ajustes</h1></div>
   <div id="set-conn"></div>
-  <label class="f"><span>Saldo inicial en cuenta</span><input class="inp" id="s-saldo" type="number" step="0.01" inputmode="decimal"></label>
-  <label class="f"><span>Fecha de ese saldo</span><input class="inp" id="s-fecha" type="date"></label>
-  <button class="btn pri wide" style="margin-top:14px" id="s-save">Guardar</button>
+  <h2 class="sec">Mis cuentas <button id="s-addcta">+ Agregar cuenta</button></h2>
+  <div id="s-cuentas"></div>
+  <label class="f"><span>Desde qué fecha llevas la cuenta</span><input class="inp" id="s-fecha" type="date"></label>
+  <button class="btn pri wide" style="margin-top:14px" id="s-save">Guardar fecha</button>
   <h2 class="sec">Negocios</h2>
   <div id="s-neg"></div>
   <div class="card-f"><button class="btn sm" id="s-addneg">+ Agregar negocio</button></div>
@@ -359,11 +361,12 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
 <div class="sheet" id="sh-mov"><div class="sheet-in">
   <div class="sheet-h"><h3 id="m-tit">Registrar</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="amt"><div class="amt-v out" id="m-amt"><span class="cur">S/</span><span id="m-amt-n">0</span></div></div>
-  <div class="seg"><button id="m-g" class="on g">Gasto</button><button id="m-i">Ingreso</button><button id="m-t">Pago tarjeta</button></div>
+  <div class="seg"><button id="m-g" class="on g">Gasto</button><button id="m-i">Ingreso</button><button id="m-t">Pago tarj.</button><button id="m-mv">Mover</button></div>
   <div id="m-wrap-neg"><div class="lbl">Negocio</div><div class="chips" id="m-neg"></div></div>
   <div id="m-wrap-cat"><div class="lbl">Categoría</div><div class="chips" id="m-cat"></div></div>
-  <div id="m-wrap-met"><div class="lbl">Pagado con</div><div class="chips" id="m-met"></div></div>
+  <div id="m-wrap-met"><div class="lbl" id="m-lbl-met">Pagado con</div><div class="chips" id="m-met"></div></div>
   <div id="m-wrap-tar"><div class="lbl">Tarjeta</div><div class="chips" id="m-tar"></div></div>
+  <div id="m-wrap-dest"><div class="lbl">A la cuenta</div><div class="chips" id="m-dest"></div></div>
   <div class="pad" id="m-pad"></div>
   <label class="f"><span>Descripción</span><input class="inp" id="m-desc" list="dl-desc" placeholder="Menú, taxi, ventas del día…" autocomplete="off"><datalist id="dl-desc"></datalist></label>
   <label class="f"><span>Fecha</span><input class="inp" id="m-fecha" type="date"></label>
@@ -449,6 +452,19 @@ label.f>span{display:block;font-size:11.5px;color:var(--mute);margin-bottom:5px;
   <div id="d-body"></div>
 </div></div>
 
+<!-- ===== CUENTA ===== -->
+<div class="sheet" id="sh-cuenta"><div class="sheet-in">
+  <div class="sheet-h"><h3 id="c-tit">Nueva cuenta</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <label class="f"><span>Nombre</span><input class="inp" id="c-nombre" placeholder="Efectivo, Yape, BCP…"></label>
+  <div class="two">
+    <label class="f"><span>Saldo inicial (S/)</span><input class="inp" id="c-saldo" type="number" step="0.01" inputmode="decimal" value="0"></label>
+    <label class="f"><span>Desde</span><input class="inp" id="c-desde" type="date"></label>
+  </div>
+  <div class="hint">El saldo inicial es lo que tenías en esta cuenta ese día. Desde ahí, cada movimiento la sube o baja sola.</div>
+  <button class="btn pri wide" style="margin-top:16px" id="c-save">Crear cuenta</button>
+  <button class="btn wide dan" style="margin-top:9px;display:none" id="c-del">Eliminar cuenta</button>
+</div></div>
+
 <!-- ===== ABONO A CUOTA ===== -->
 <div class="sheet" id="sh-abono"><div class="sheet-in">
   <div class="sheet-h"><h3>Registrar abono</h3><button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -489,8 +505,8 @@ const REMOTO = !!(SUPA.url && SUPA.key);
 const SS = "libreta.sesion", LS = "libreta.v2", LP = "libreta.prefs";
 const logueado = () => !!(REMOTO && SESION && SESION.uid);
 
-const TABLAS = ["config","negocios","movimientos","prestamos","cuotas","juntas","aportes","tarjetas","pagos_fijos"];
-let S = { config:{}, negocios:[], movimientos:[], prestamos:[], cuotas:[], juntas:[], aportes:[], tarjetas:[], pagos_fijos:[] };
+const TABLAS = ["config","negocios","movimientos","prestamos","cuotas","juntas","aportes","tarjetas","pagos_fijos","cuentas"];
+let S = { config:{}, negocios:[], movimientos:[], prestamos:[], cuotas:[], juntas:[], aportes:[], tarjetas:[], pagos_fijos:[], cuentas:[] };
 let PREF = {};   // último negocio/categoría/método usado por tipo
 
 const NEG_DEFAULT = [
@@ -635,8 +651,10 @@ async function cargar(){
     try{ const raw=localStorage.getItem(SS); if(raw) SESION=JSON.parse(raw); }catch(e){}
     if(logueado()){
       const antes=JSON.stringify(S);
-      const p=bajaTodo().then(()=>{ if(JSON.stringify(S)!==antes&&typeof render==="function") render(); }).catch(e=>{ SYNC.error=e.message; }).finally(()=>{ pintaEstado(); sincroniza(); });
+      // normaliza corre DESPUÉS de bajar, nunca en paralelo: si no, la bajada pisaría lo que la migración acaba de crear
+      const p=bajaTodo().then(async()=>{ await normaliza(); if(JSON.stringify(S)!==antes&&typeof render==="function") render(); }).catch(e=>{ SYNC.error=e.message; }).finally(()=>{ pintaEstado(); sincroniza(); });
       if(!S.movimientos.length&&!S.negocios.length) await p;   // primera vez en este dispositivo: espera a tener los datos
+      return;
     }
   }
   await normaliza();
@@ -644,11 +662,14 @@ async function cargar(){
 /* negocios por defecto + campos nuevos en filas viejas */
 async function normaliza(){
   if(!S.negocios.length) for(const n of NEG_DEFAULT) await ins("negocios",{...n});
+  if(!S.cuentas.length) await ins("cuentas",{nombre:"Efectivo",saldo_inicial:n2(+S.config.saldo_inicial||0),desde:S.config.fecha_inicio||hoyISO(),orden:1,activa:true});
+  const prin=cuentaPrincipal();
   for(const m of S.movimientos){
     const patch={};
     if(m.pl===undefined||m.pl===null) patch.pl = !(["Préstamo","Junta","Capital devuelto","Préstamo otorgado"].includes(m.categoria));
     if(!m.metodo) patch.metodo="caja";
     if(!m.negocio) patch.negocio = (m.categoria==="Préstamo"||m.categoria==="Interés") ? NEG_PREST : NEG_PERS;
+    if(!m.cuenta_id && m.tipo!=="transferencia" && !(m.tipo==="gasto"&&(m.metodo==="tarjeta"||patch.metodo==="tarjeta")) && prin) patch.cuenta_id=prin.id;
     if(Object.keys(patch).length) await upd("movimientos",m.id,patch);
   }
 }
@@ -726,7 +747,9 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 window.addEventListener("online",despierta);
 setInterval(()=>{ if(COLA.length&&logueado()) sincroniza(); },45000);
 
-async function ins(tabla,fila){ fila.id=fila.id||uid(); S[tabla].push(fila); guardaLocal(); encola(tabla,"ins",fila.id,{...fila}); sincroniza(); return fila; }
+async function ins(tabla,fila){ fila.id=fila.id||uid();
+  if(tabla==="movimientos"&&fila.cuenta_id===undefined&&fila.tipo!=="transferencia"&&!(fila.tipo==="gasto"&&fila.metodo==="tarjeta")) fila.cuenta_id=(cuentaPrincipal()||{}).id||null;
+  S[tabla].push(fila); guardaLocal(); encola(tabla,"ins",fila.id,{...fila}); sincroniza(); return fila; }
 async function upd(tabla,id,patch){ const f=S[tabla].find(x=>x.id===id); if(!f) return; Object.assign(f,patch); guardaLocal(); encola(tabla,"upd",id,{...patch}); sincroniza(); return f; }
 async function del(tabla,id){ S[tabla]=S[tabla].filter(x=>x.id!==id); guardaLocal(); encola(tabla,"del",id); sincroniza(); }
 async function guardaConfig(patch){ Object.assign(S.config,patch); guardaLocal(); encola("config","set",S.config.id,{...S.config}); sincroniza(); }
@@ -736,9 +759,17 @@ async function guardaConfig(patch){ Object.assign(S.config,patch); guardaLocal()
    Resultado (pl=true): ventas, ads, comida, interés cobrado.
    Balance (pl=false): prestar, cobrar capital, junta, pagar tarjeta.
    ============================================================ */
-function cajaEn(d){
-  let s=+S.config.saldo_inicial||0;
+const cuentasOrden = () => [...S.cuentas].filter(c=>c.activa!==false).sort((a,b)=>(a.orden||0)-(b.orden||0));
+const cuentaPrincipal = () => cuentasOrden()[0] || S.cuentas[0] || null;
+const nombreCuenta = cid => (S.cuentas.find(c=>c.id===cid)||{}).nombre || "";
+/* saldo total (cid vacío) o de una sola cuenta. Las transferencias mueven plata entre cuentas: no cambian el total. */
+function cajaEn(d,cid){
+  let s=0;
+  for(const c of S.cuentas){ if(cid&&c.id!==cid) continue; if(c.desde&&c.desde>d) continue; s+=+c.saldo_inicial||0; }
+  if(!S.cuentas.length&&!cid) s+=+S.config.saldo_inicial||0;   // por si aún no se migró
   for(const m of S.movimientos){ if(m.fecha>d) continue;
+    if(m.tipo==="transferencia"){ if(cid){ if(m.cuenta_id===cid) s-=+m.monto; if(m.cuenta_destino===cid) s+=+m.monto; } continue; }
+    if(cid&&m.cuenta_id!==cid) continue;
     if(m.tipo==="ingreso") s+=+m.monto;
     else if(m.tipo==="gasto"&&m.metodo!=="tarjeta") s-=+m.monto;
     else if(m.tipo==="pago_tarjeta") s-=+m.monto; }
@@ -859,6 +890,7 @@ const ICO={
  "Préstamo otorgado":"M7 17L17 7M7 7h10v10",
  "Capital devuelto":"M17 7L7 17M17 17H7V7",
  "Pago de tarjeta":"M2 5h20v14H2zM2 10h20M6 15h4",
+ "Transferencia":"M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4",
 };
 const ico=(cat,col)=>`<span class="ico" style="color:${col};background:${tint(col,.16)}"><svg viewBox="0 0 24 24"><path d="${ICO[cat]||ICO["Otros"]}"/></svg></span>`;
 function tint(c,a){ if(!c||c[0]!=="#"){ return "var(--surface2)"; } const n=parseInt(c.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
@@ -867,12 +899,19 @@ const dot = c => `<span class="dot" style="background:${c}"></span>`;
 
 /* ---------- fila de movimiento ---------- */
 function fila(m, conNeg=true){
+  if(m.tipo==="transferencia"){
+    const sub=[esc(nombreCuenta(m.cuenta_id))+" → "+esc(nombreCuenta(m.cuenta_destino)), fCorta(m.fecha)].join(" · ");
+    return `<div class="row tap" data-edit="${m.id}">${ico("Transferencia",NC.card)}<div class="row-main">
+      <div class="row-t"><span class="nm">${esc(m.descripcion||"Entre cuentas")}</span></div>
+      <div class="row-s">${sub}</div></div><div class="row-n mute">${fmt(m.monto)}</div></div>`;
+  }
   const dir = m.tipo==="ingreso"?"in":m.tipo==="gasto"?"out":"card";
   const cls = m.tipo==="pago_tarjeta"?"":dir;
   const bal = m.pl===false ? `<span class="pill tar">balance</span>` : "";
   const tar = m.metodo==="tarjeta" ? `<span class="pill tar">tarjeta</span>` : "";
   const nm  = m.tipo==="pago_tarjeta" ? "Pago de tarjeta" : (m.descripcion||m.categoria||"Movimiento");
-  const sub = [conNeg&&m.negocio?dot(negColor(m.negocio))+esc(m.negocio):"", m.categoria&&m.tipo!=="pago_tarjeta"?esc(m.categoria):"", fCorta(m.fecha)].filter(Boolean).join(" · ");
+  const cta = (cuentasOrden().length>1&&m.metodo!=="tarjeta"&&m.cuenta_id) ? esc(nombreCuenta(m.cuenta_id)) : "";
+  const sub = [conNeg&&m.negocio?dot(negColor(m.negocio))+esc(m.negocio):"", m.categoria&&m.tipo!=="pago_tarjeta"?esc(m.categoria):"", cta, fCorta(m.fecha)].filter(Boolean).join(" · ");
   const num = m.tipo==="pago_tarjeta" ? `<div class="row-n mute">−${fmt(m.monto)}</div>`
             : `<div class="row-n ${dir}">${dir==="in"?"+":"−"}${fmt(m.monto)}</div>`;
   const col = m.tipo==="ingreso"?NC.in : m.tipo==="pago_tarjeta"?NC.card : (m.negocio&&negColor(m.negocio)[0]==="#"?negColor(m.negocio):NC.out);
@@ -907,6 +946,8 @@ function rHoy(){
     ? `<span class="tag ${rh.neto>0?"in":rh.neto<0?"out":"flat"}">Hoy ${SF(rh.neto)}</span><span>${nMov} movimiento${nMov===1?"":"s"} · ${S_(rh.ing).slice(3)} entró · ${S_(rh.gas).slice(3)} salió</span>`
     : `<span class="tag flat">Hoy sin movimientos</span><span>Anota el primero con el botón verde.</span>`;
   sparkline();
+  const cs=cuentasOrden();
+  $("#h-cuentas").innerHTML = cs.length>1 ? cs.map(c=>{ const b=cajaEn(hoy,c.id); return `<span class="chip">${esc(c.nombre)} <b style="margin-left:5px;color:${b<0?"var(--out)":"var(--ink)"}">${S0(b)}</b></span>`; }).join("") : "";
   const e=$("#h-mes"); e.textContent=S0(rm.neto); e.className="v "+(rm.neto>0?"in":rm.neto<0?"out":"");
   $("#h-patri").textContent=S0(patrimonioEn(hoy));
   const deuda=deudaEn(hoy);
@@ -1099,8 +1140,10 @@ function rHist(){
 
 /* ---------- AJUSTES ---------- */
 function rSet(){
-  $("#s-saldo").value=S.config.saldo_inicial??0; $("#s-fecha").value=S.config.fecha_inicio||hoyISO();
+  $("#s-fecha").value=S.config.fecha_inicio||hoyISO();
   rSetEstado();
+  const hoy=hoyISO();
+  $("#s-cuentas").innerHTML=`<div class="ledger">${cuentasOrden().map(c=>`<div class="row tap" data-editcta="${c.id}"><div class="row-main"><div class="row-t"><span class="nm">${esc(c.nombre)}</span></div><div class="row-s">saldo inicial ${fmt(c.saldo_inicial)}${c.desde?" · desde "+fCorta(c.desde):""}</div></div><div class="row-n">${S0(cajaEn(hoy,c.id))}</div></div>`).join("")}</div>`;
   $("#s-neg").innerHTML=`<div class="ledger">${negOrden().map(n=>`<div class="row"><div class="row-main"><div class="row-t">${dot(n.color)}&nbsp;<span class="nm">${esc(n.nombre)}</span></div></div>
     <button class="row-act" data-renneg="${n.id}">Renombrar</button></div>`).join("")}</div>`;
 }
@@ -1161,21 +1204,32 @@ function chips(sel, items, actual, onpick, colorFn){
 }
 function pintaMov(){
   $("#m-amt-n").textContent=M.txt||"0";
-  $("#m-amt").className="amt-v "+(M.tipo==="gasto"?"out":M.tipo==="ingreso"?"in":"card");
-  $("#m-g").className=M.tipo==="gasto"?"on g":""; $("#m-i").className=M.tipo==="ingreso"?"on i":""; $("#m-t").className=M.tipo==="pago_tarjeta"?"on t":"";
-  const pt=M.tipo==="pago_tarjeta";
-  $("#m-wrap-neg").style.display=pt?"none":""; $("#m-wrap-cat").style.display=pt?"none":"";
-  $("#m-wrap-met").style.display=(M.tipo==="gasto"&&S.tarjetas.length)?"":"none";
-  $("#m-wrap-tar").style.display=((M.tipo==="gasto"&&M.metodo==="tarjeta")||pt)&&S.tarjetas.length?"":"none";
-  if(!pt){
+  const mv=M.tipo==="transferencia", pt=M.tipo==="pago_tarjeta", gasto=M.tipo==="gasto", ing=M.tipo==="ingreso";
+  const conTarjeta=gasto&&M.metodo==="tarjeta";
+  $("#m-amt").className="amt-v "+(gasto?"out":ing?"in":pt?"card":"");
+  $("#m-g").className=gasto?"on g":""; $("#m-i").className=ing?"on i":""; $("#m-t").className=pt?"on t":""; $("#m-mv").className=mv?"on":"";
+  $("#m-t").style.display=S.tarjetas.length?"":"none"; $("#m-mv").style.display=cuentasOrden().length>=2?"":"none";
+  $("#m-wrap-neg").style.display=(pt||mv)?"none":""; $("#m-wrap-cat").style.display=(pt||mv)?"none":"";
+  $("#m-wrap-tar").style.display=(conTarjeta||pt)&&S.tarjetas.length?"":"none";
+  if(!pt&&!mv){
     chips("#m-neg", negOrden().map(n=>n.nombre), M.negocio, v=>{ M.negocio=v; pintaMov(); }, negColor);
-    const cats=M.tipo==="gasto"?CAT_G:CAT_I; if(!cats.includes(M.categoria)) M.categoria=cats[0];
+    const cats=gasto?CAT_G:CAT_I; if(!cats.includes(M.categoria)) M.categoria=cats[0];
     chips("#m-cat", cats, M.categoria, v=>{ M.categoria=v; pintaMov(); });
-    if(M.tipo==="gasto") chips("#m-met", ["Caja / Yape","Tarjeta"], M.metodo==="tarjeta"?"Tarjeta":"Caja / Yape", v=>{ M.metodo=v==="Tarjeta"?"tarjeta":"caja"; if(M.metodo==="tarjeta"&&!M.tarjeta_id) M.tarjeta_id=S.tarjetas[0]&&S.tarjetas[0].id; pintaMov(); });
   }
-  if(S.tarjetas.length){ if(!M.tarjeta_id) M.tarjeta_id=S.tarjetas[0].id;
+  // cuenta de origen (o método) — se oculta si solo hay una cuenta y no hay tarjeta
+  const metItems=cuentasOrden().map(c=>c.nombre).concat((gasto&&S.tarjetas.length)?["Tarjeta"]:[]);
+  $("#m-wrap-met").style.display=(mv||metItems.length>1)?"":"none";
+  $("#m-lbl-met").textContent=mv?"De la cuenta":ing?"Entró a":pt?"Pagas desde":"Pagado con";
+  if(!M.cuenta_id) M.cuenta_id=(cuentaPrincipal()||{}).id;
+  const metActual=conTarjeta?"Tarjeta":(S.cuentas.find(c=>c.id===M.cuenta_id)||cuentaPrincipal()||{}).nombre;
+  chips("#m-met", mv?cuentasOrden().map(c=>c.nombre):metItems, metActual, v=>{ if(v==="Tarjeta"){ M.metodo="tarjeta"; if(!M.tarjeta_id) M.tarjeta_id=S.tarjetas[0]&&S.tarjetas[0].id; } else { M.metodo="caja"; const c=S.cuentas.find(x=>x.nombre===v); if(c) M.cuenta_id=c.id; } pintaMov(); });
+  // cuenta de destino (solo transferencia)
+  $("#m-wrap-dest").style.display=mv?"":"none";
+  if(mv){ if(!M.cuenta_destino||M.cuenta_destino===M.cuenta_id){ const otra=cuentasOrden().find(c=>c.id!==M.cuenta_id); M.cuenta_destino=otra&&otra.id; }
+    chips("#m-dest", cuentasOrden().filter(c=>c.id!==M.cuenta_id).map(c=>c.nombre), (S.cuentas.find(c=>c.id===M.cuenta_destino)||{}).nombre, v=>{ const c=S.cuentas.find(x=>x.nombre===v); if(c) M.cuenta_destino=c.id; pintaMov(); }); }
+  if((conTarjeta||pt)&&S.tarjetas.length){ if(!M.tarjeta_id) M.tarjeta_id=S.tarjetas[0].id;
     chips("#m-tar", S.tarjetas.map(t=>t.nombre), (S.tarjetas.find(t=>t.id===M.tarjeta_id)||{}).nombre, v=>{ M.tarjeta_id=(S.tarjetas.find(t=>t.nombre===v)||{}).id; pintaMov(); }); }
-  $("#m-desc").placeholder = M.tipo==="ingreso"&&M.categoria==="Ventas" ? "Ventas del día" : M.tipo==="pago_tarjeta" ? "Pago de tarjeta (opcional)" : "Menú, taxi, suscripción…";
+  $("#m-desc").placeholder = mv?"Motivo (opcional)" : (ing&&M.categoria==="Ventas") ? "Ventas del día" : pt ? "Pago de tarjeta (opcional)" : "Menú, taxi, suscripción…";
 }
 $("#m-pad").innerHTML=["1","2","3","4","5","6","7","8","9",".","0","⌫"].map(k=>`<button class="key" data-k="${k}">${k==="⌫"?'<svg viewBox="0 0 24 24"><path d="M9 5H20v14H9l-6-7z M12 9l5 6M17 9l-5 6"/></svg>':k}</button>`).join("");
 $("#m-pad").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ const k=b.dataset.k;
@@ -1184,12 +1238,14 @@ $("#m-pad").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ const k=b.da
   else { if(M.txt.includes(".")&&M.txt.split(".")[1].length>=2) return; if(M.txt.replace(".","").length>=9) return; M.txt=(M.txt==="0"?"":M.txt)+k; }
   $("#m-amt-n").textContent=M.txt||"0"; });
 $("#m-g").onclick=()=>{ M.tipo="gasto"; aplicaPref(); pintaMov(); };
-$("#m-i").onclick=()=>{ M.tipo="ingreso"; aplicaPref(); pintaMov(); };
-$("#m-t").onclick=()=>{ M.tipo="pago_tarjeta"; if(!S.tarjetas.length){ toast("Primero crea una tarjeta en Cuentas"); M.tipo="gasto"; } pintaMov(); };
-function aplicaPref(){ const p=PREF[M.tipo]||{}; if(!M.editando){ M.negocio=p.negocio||M.negocio||negOrden()[0].nombre; M.categoria=p.categoria||(M.tipo==="gasto"?CAT_G[0]:CAT_I[0]); M.metodo=p.metodo||"caja"; } }
+$("#m-i").onclick=()=>{ M.tipo="ingreso"; M.metodo="caja"; aplicaPref(); pintaMov(); };
+$("#m-t").onclick=()=>{ if(!S.tarjetas.length) return toast("Primero crea una tarjeta en Cuentas"); M.tipo="pago_tarjeta"; M.metodo="caja"; if(!M.tarjeta_id) M.tarjeta_id=S.tarjetas[0].id; pintaMov(); };
+$("#m-mv").onclick=()=>{ if(cuentasOrden().length<2) return toast("Necesitas al menos dos cuentas para mover"); M.tipo="transferencia"; M.metodo="caja"; pintaMov(); };
+function aplicaPref(){ const p=PREF[M.tipo]||{}; if(!M.editando){ M.negocio=p.negocio||M.negocio||negOrden()[0].nombre; M.categoria=p.categoria||(M.tipo==="gasto"?CAT_G[0]:CAT_I[0]); M.metodo=p.metodo||"caja";
+  if(!M.cuenta_id) M.cuenta_id=(p.cuenta_id&&S.cuentas.some(c=>c.id===p.cuenta_id))?p.cuenta_id:(cuentaPrincipal()||{}).id; } }
 
 function abreRegistro(pre){
-  M={ tipo:"gasto", txt:"", negocio:negOrden()[0].nombre, categoria:CAT_G[0], metodo:"caja", tarjeta_id:null, editando:null, ...(pre||{}) };
+  M={ tipo:"gasto", txt:"", negocio:negOrden()[0].nombre, categoria:CAT_G[0], metodo:"caja", tarjeta_id:null, cuenta_id:(cuentaPrincipal()||{}).id, cuenta_destino:null, editando:null, ...(pre||{}) };
   if(!pre||!pre.editando) aplicaPref();
   $("#m-tit").textContent=M.editando?"Editar movimiento":"Registrar";
   $("#m-save").textContent=M.editando?"Guardar cambios":"Guardar";
@@ -1202,18 +1258,26 @@ function abreRegistro(pre){
 $("#fab").onclick=()=>abreRegistro();
 $("#m-save").onclick=async()=>{
   const monto=parseFloat(M.txt||"0"); if(!(monto>0)) return toast("Escribe un monto mayor que cero");
+  if(M.tipo==="transferencia"){
+    if(!M.cuenta_id||!M.cuenta_destino||M.cuenta_id===M.cuenta_destino) return toast("Elige dos cuentas distintas");
+    const filaT={ fecha:$("#m-fecha").value||hoyISO(), tipo:"transferencia", monto:n2(monto), descripcion:$("#m-desc").value.trim(), negocio:null, categoria:"Transferencia", metodo:"caja", tarjeta_id:null, cuenta_id:M.cuenta_id, cuenta_destino:M.cuenta_destino, pl:false };
+    if(M.editando){ await upd("movimientos",M.editando,filaT); toast("Movimiento actualizado"); }
+    else { await ins("movimientos",{...filaT,creado:new Date().toISOString()}); toast("Moviste "+S_(monto)+" · "+nombreCuenta(M.cuenta_id)+" → "+nombreCuenta(M.cuenta_destino),"card"); }
+    cierra(); render(); return;
+  }
+  const conTar=(M.tipo==="gasto"&&M.metodo==="tarjeta");
   const fila={ fecha:$("#m-fecha").value||hoyISO(), tipo:M.tipo, monto:n2(monto), descripcion:$("#m-desc").value.trim(),
     negocio:M.tipo==="pago_tarjeta"?null:M.negocio, categoria:M.tipo==="pago_tarjeta"?"Pago de tarjeta":M.categoria,
-    metodo:M.tipo==="gasto"?M.metodo:"caja", tarjeta_id:(M.tipo==="pago_tarjeta"||(M.tipo==="gasto"&&M.metodo==="tarjeta"))?M.tarjeta_id:null,
-    pl:M.tipo!=="pago_tarjeta" };
-  if(M.tipo!=="pago_tarjeta"){ PREF[M.tipo]={negocio:M.negocio,categoria:M.categoria,metodo:M.metodo}; guardaPref(); }
+    metodo:M.tipo==="gasto"?M.metodo:"caja", tarjeta_id:(M.tipo==="pago_tarjeta"||conTar)?M.tarjeta_id:null,
+    cuenta_id:conTar?null:M.cuenta_id, cuenta_destino:null, pl:M.tipo!=="pago_tarjeta" };
+  if(M.tipo!=="pago_tarjeta"){ PREF[M.tipo]={negocio:M.negocio,categoria:M.categoria,metodo:M.metodo,cuenta_id:M.cuenta_id}; guardaPref(); }
   if(M.editando){ await upd("movimientos",M.editando,fila); toast("Movimiento actualizado"); }
   else { await ins("movimientos",{...fila,creado:new Date().toISOString()}); toast((M.tipo==="gasto"?"Gasto":M.tipo==="ingreso"?"Ingreso":"Pago de tarjeta")+" de "+S_(monto), M.tipo==="gasto"?"out":M.tipo==="ingreso"?"in":"card"); }
   cierra(); render();
 };
 $("#m-del").onclick=async()=>{ if(!M.editando) return; if(!confirm("¿Borrar este movimiento?")) return; await del("movimientos",M.editando); cierra(); render(); toast("Borrado"); };
 function editaMov(id){ const m=S.movimientos.find(x=>x.id===id); if(!m) return;
-  abreRegistro({ editando:id, tipo:m.tipo, txt:String(+m.monto), negocio:m.negocio||negOrden()[0].nombre, categoria:m.categoria, metodo:m.metodo||"caja", tarjeta_id:m.tarjeta_id||null, descripcion:m.descripcion||"", fecha:m.fecha }); }
+  abreRegistro({ editando:id, tipo:m.tipo, txt:String(+m.monto), negocio:m.negocio||negOrden()[0].nombre, categoria:m.categoria, metodo:m.metodo||"caja", tarjeta_id:m.tarjeta_id||null, cuenta_id:m.cuenta_id||(cuentaPrincipal()||{}).id, cuenta_destino:m.cuenta_destino||null, descripcion:m.descripcion||"", fecha:m.fecha }); }
 
 /* ============================== PRÉSTAMO ============================== */
 function pDatos(){ return { persona:$("#p-persona").value.trim(), capital:parseFloat($("#p-capital").value||0), inicio:$("#p-inicio").value||hoyISO(),
@@ -1358,7 +1422,7 @@ async function pagaFijo(id,ym){ const pf=S.pagos_fijos.find(x=>x.id===id); if(!p
   toast(pf.nombre+" pagado"); }
 
 document.body.addEventListener("click", async ev=>{
-  const b=ev.target.closest("[data-go],[data-pend],[data-edit],[data-cn],[data-fh],[data-neg],[data-verp],[data-delp],[data-editp],[data-verj],[data-delj],[data-editj],[data-cobrarj],[data-cuota],[data-uncuota],[data-abono],[data-aporte],[data-unaporte],[data-pagotar],[data-vertar],[data-deltar],[data-edittar],[data-verfijo],[data-delfijo],[data-editfijo],[data-renneg]");
+  const b=ev.target.closest("[data-go],[data-pend],[data-edit],[data-cn],[data-fh],[data-neg],[data-verp],[data-delp],[data-editp],[data-verj],[data-delj],[data-editj],[data-cobrarj],[data-cuota],[data-uncuota],[data-abono],[data-aporte],[data-unaporte],[data-pagotar],[data-vertar],[data-deltar],[data-edittar],[data-verfijo],[data-delfijo],[data-editfijo],[data-renneg],[data-editcta]");
   if(!b) return; const d=b.dataset;
   if(d.go!==undefined){ ver(d.go); return; }
   if(d.cn!==undefined){ NEG_F=d.cn; rCurva(); return; }
@@ -1390,6 +1454,7 @@ document.body.addEventListener("click", async ev=>{
   if(d.abono){ abreAbono(d.abono); return; }
   if(d.unaporte){ await deshaceAporte(d.unaporte); render(); detalleJunta(d.j); return; }
   if(d.aporte){ await pagaAporte(d.aporte); render(); detalleJunta(d.j); return; }
+  if(d.editcta){ editaCuenta(d.editcta); return; }
   if(d.renneg){ const n=S.negocios.find(x=>x.id===d.renneg); const nuevo=prompt("Nuevo nombre para "+n.nombre, n.nombre); if(!nuevo||nuevo===n.nombre) return;
     await upd("negocios",n.id,{nombre:nuevo}); for(const m of S.movimientos.filter(m=>m.negocio===n.nombre)) await upd("movimientos",m.id,{negocio:nuevo});
     for(const pf of S.pagos_fijos.filter(p=>p.negocio===n.nombre)) await upd("pagos_fijos",pf.id,{negocio:nuevo}); render(); toast("Renombrado"); return; }
@@ -1437,7 +1502,23 @@ function detalleJunta(jid){ const j=S.juntas.find(x=>x.id===jid); if(!j) return;
         <div class="row-n">${fmt(a.monto)}</div><button class="row-act" data-${pag?"unaporte":"aporte"}="${a.id}" data-j="${jid}">${pag?"Deshacer":"Pagué"}</button></div>`; }).join("")}</div>`; abre("sh-det"); }
 
 /* ============================== AJUSTES ============================== */
-$("#s-save").onclick=async()=>{ await guardaConfig({saldo_inicial:n2(parseFloat($("#s-saldo").value||0)),fecha_inicio:$("#s-fecha").value||hoyISO()}); render(); toast("Guardado"); };
+$("#s-save").onclick=async()=>{ await guardaConfig({fecha_inicio:$("#s-fecha").value||hoyISO()}); render(); toast("Guardado"); };
+/* ---------- cuentas ---------- */
+let CTA_ED=null;
+$("#s-addcta").onclick=()=>{ CTA_ED=null; $("#c-tit").textContent="Nueva cuenta"; $("#c-save").textContent="Crear cuenta"; $("#c-del").style.display="none"; $("#c-nombre").value=""; $("#c-saldo").value="0"; $("#c-desde").value=S.config.fecha_inicio||hoyISO(); abre("sh-cuenta"); };
+function editaCuenta(cid){ const c=S.cuentas.find(x=>x.id===cid); if(!c) return; CTA_ED=cid; $("#c-tit").textContent="Editar cuenta"; $("#c-save").textContent="Guardar cambios"; $("#c-del").style.display=cuentasOrden().length>1?"block":"none"; $("#c-nombre").value=c.nombre||""; $("#c-saldo").value=c.saldo_inicial??0; $("#c-desde").value=c.desde||S.config.fecha_inicio||hoyISO(); cierra(); abre("sh-cuenta"); }
+$("#c-save").onclick=async()=>{ const n=$("#c-nombre").value.trim(); if(!n) return toast("Ponle nombre a la cuenta");
+  const datos={nombre:n,saldo_inicial:n2(parseFloat($("#c-saldo").value||0)),desde:$("#c-desde").value||S.config.fecha_inicio||hoyISO()};
+  if(CTA_ED){ await upd("cuentas",CTA_ED,datos); toast("Cuenta actualizada"); }
+  else { await ins("cuentas",{...datos,orden:S.cuentas.reduce((a,c)=>Math.max(a,c.orden||0),0)+1,activa:true}); toast("Cuenta creada"); }
+  CTA_ED=null; cierra(); render(); };
+$("#c-del").onclick=async()=>{ if(!CTA_ED) return; const cid=CTA_ED, borra=S.cuentas.find(c=>c.id===cid), dest=cuentasOrden().find(c=>c.id!==cid);
+  if(!dest) return toast("Debe quedar al menos una cuenta");
+  const usos=S.movimientos.filter(m=>m.cuenta_id===cid||m.cuenta_destino===cid).length;
+  if(!confirm("¿Eliminar \""+borra.nombre+"\"?"+(usos?" Sus "+usos+" movimiento"+(usos===1?"":"s")+" y su saldo pasan a \""+dest.nombre+"\".":""))) return;
+  for(const m of S.movimientos){ const patch={}; if(m.cuenta_id===cid) patch.cuenta_id=dest.id; if(m.cuenta_destino===cid) patch.cuenta_destino=dest.id; if(Object.keys(patch).length) await upd("movimientos",m.id,patch); }
+  if(+borra.saldo_inicial) await upd("cuentas",dest.id,{saldo_inicial:n2((+dest.saldo_inicial||0)+(+borra.saldo_inicial||0))});
+  await del("cuentas",cid); CTA_ED=null; cierra(); render(); toast("Cuenta eliminada"); };
 $("#s-export").onclick=()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:"application/json"})); a.download="libreta-"+hoyISO()+".json"; a.click(); };
 $("#s-import").onclick=()=>$("#s-import-file").click();
 $("#s-import-file").onchange=async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file) return;
